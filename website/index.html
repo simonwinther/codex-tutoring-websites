@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="A personal collection of interactive guides and practice spaces.">
+    <meta name="theme-color" content="#f6f5ef">
+    <title>{{TITLE}}</title>
+    <link rel="stylesheet" href="{{BASE}}styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#sites">Skip to learning sites</a>
+    <header class="wrap masthead">
+      <a class="brand" href="{{BASE}}"><span class="brand-mark" aria-hidden="true">l.</span>learning library</a>
+      <span class="header-note"><span class="status-dot" aria-hidden="true"></span>A work in progress, by design</span>
+    </header>
+    <main class="wrap">
+      <section class="intro" aria-labelledby="title">
+        {{BREADCRUMB}}
+        <h1 id="title">{{HEADING}}</h1>
+        <p>{{INTRO}}</p>
+        <div class="intro-rule"><span>LEARN BY EXPLORING</span><span aria-hidden="true">↓</span></div>
+      </section>
+      <section id="sites" aria-labelledby="collection-title">
+        <div class="collection-heading"><h2 id="collection-title">The collection <span class="count">{{COUNT}}</span></h2><div class="folders">{{FOLDERS}}</div></div>
+        <div class="cards">{{CARDS}}</div>
+      </section>
+    </main>
+    <footer class="wrap"><span>A notebook you can interact with.</span><a href="{{BASE}}">Back to the library ↑</a></footer>
+  </body>
+</html>

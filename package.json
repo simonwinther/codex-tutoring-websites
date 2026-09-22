@@ -1,0 +1,13 @@
+{
+  "name": "tutoring-websites",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "sites": "node scripts/build.mjs --list",
+    "build": "node scripts/build.mjs",
+    "preview": "node scripts/preview.mjs",
+    "test:hosting": "playwright test"
+  },
+  "devDependencies": { "@playwright/test": "1.63.0" }
+}

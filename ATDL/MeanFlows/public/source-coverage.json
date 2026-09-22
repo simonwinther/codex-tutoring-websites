@@ -1,0 +1,690 @@
+{
+  "paper": "Mean Flows for One-step Generative Modeling",
+  "authors": [
+    "Zhengyang Geng",
+    "Mingyang Deng",
+    "Xingjian Bai",
+    "J. Zico Kolter",
+    "Kaiming He"
+  ],
+  "venue": "NeurIPS 2025",
+  "sourcePdf": "Mean Flows.pdf",
+  "sourceSha256": "c0b560a099c17966bbb0bb293f6c8d295f4a5a5f47b5698b4f26bd2d0f793caa",
+  "pageCount": 23,
+  "scope": "The supplied PDF, including substantive appendices and checklist disclosures. Subsequent MeanFlow variants are outside scope.",
+  "provenance": {
+    "paper": "Numbered equations and measurements transcribed from supplied PDF.",
+    "intuition": "Plain-language explanations and misconception callouts are added teaching commentary.",
+    "simulation": "Gaussian-mixture marginal field, rotating field, and affine predictor are calculated teaching examples, not paper models.",
+    "architecture": "Schematic explanation of the documented DiT and U-net setups.",
+    "charts": "Figure 1 compute positions digitized approximately ±0.05 log2 GFLOPs. Figure 4 nonterminal visible FIDs digitized approximately ±0.1. Tabulated endpoints exact; clipped points omitted.",
+    "images": "24 original 256×256 RGB images extracted with pdfimages -f 23 -l 23 -png. No image edits."
+  },
+  "entries": [
+    {
+      "id": "equation-1",
+      "title": "Equation 1 · Marginal velocity",
+      "pages": [
+        3
+      ],
+      "chapter": "flow",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-2",
+      "title": "Equation 2 · Flow ODE",
+      "pages": [
+        3
+      ],
+      "chapter": "flow",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-3",
+      "title": "Equation 3 · Average velocity",
+      "pages": [
+        3
+      ],
+      "chapter": "average",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-4",
+      "title": "Equation 4 · Displacement",
+      "pages": [
+        4
+      ],
+      "chapter": "identity",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-5",
+      "title": "Equation 5 · Differentiate",
+      "pages": [
+        4
+      ],
+      "chapter": "identity",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-6",
+      "title": "Equation 6 · MeanFlow identity",
+      "pages": [
+        4
+      ],
+      "chapter": "identity",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-7",
+      "title": "Equation 7 · Total derivative",
+      "pages": [
+        4
+      ],
+      "chapter": "identity",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-8",
+      "title": "Equation 8 · JVP direction",
+      "pages": [
+        4
+      ],
+      "chapter": "training",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-9",
+      "title": "Equation 9 · Detached regression",
+      "pages": [
+        5
+      ],
+      "chapter": "training",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-10",
+      "title": "Equation 10 · Marginal target",
+      "pages": [
+        5
+      ],
+      "chapter": "training",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-11",
+      "title": "Equation 11 · Practical target",
+      "pages": [
+        5
+      ],
+      "chapter": "training",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-12",
+      "title": "Equation 12 · Sampling",
+      "pages": [
+        5
+      ],
+      "chapter": "sampling",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-13",
+      "title": "Equation 13 · Guided field",
+      "pages": [
+        6
+      ],
+      "chapter": "guidance",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-14",
+      "title": "Equation 14 · Two marginal fields",
+      "pages": [
+        6
+      ],
+      "chapter": "guidance",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-15",
+      "title": "Equation 15 · Guided identity",
+      "pages": [
+        6
+      ],
+      "chapter": "guidance",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-16",
+      "title": "Equation 16 · Diagonal substitution",
+      "pages": [
+        6
+      ],
+      "chapter": "guidance",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-17",
+      "title": "Equation 17 · Guided regression",
+      "pages": [
+        6
+      ],
+      "chapter": "guidance",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-18",
+      "title": "Equation 18 · Guided target",
+      "pages": [
+        6
+      ],
+      "chapter": "guidance",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-19",
+      "title": "Equation 19 · Practical guidance",
+      "pages": [
+        6
+      ],
+      "chapter": "guidance",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-20",
+      "title": "Equation 20 · Improved guidance identity",
+      "pages": [
+        22
+      ],
+      "chapter": "guidance",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-21",
+      "title": "Equation 21 · Mixed guidance target",
+      "pages": [
+        22
+      ],
+      "chapter": "guidance",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-22",
+      "title": "Equation 22 · Adaptive weighting",
+      "pages": [
+        22
+      ],
+      "chapter": "guidance",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-23",
+      "title": "Equation 23 · Displacement field",
+      "pages": [
+        22
+      ],
+      "chapter": "identity",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "equation-24",
+      "title": "Equation 24 · Sufficiency",
+      "pages": [
+        23
+      ],
+      "chapter": "identity",
+      "kind": "equation",
+      "implementation": "src/data/paper.ts + Equation component in the linked chapter"
+    },
+    {
+      "id": "algorithm-1",
+      "title": "Algorithm 1 · MeanFlow training",
+      "pages": [
+        5
+      ],
+      "chapter": "training",
+      "kind": "algorithm",
+      "implementation": "TrainingLab: computed interpolation, JVP, detached target, loss, real affine update"
+    },
+    {
+      "id": "algorithm-2",
+      "title": "Algorithm 2 · One-step sampling",
+      "pages": [
+        5
+      ],
+      "chapter": "sampling",
+      "kind": "algorithm",
+      "implementation": "Algorithm pseudocode, SamplingLab and connected Walkthrough"
+    },
+    {
+      "id": "figure-1",
+      "title": "Figure 1 · One-step compute comparison",
+      "pages": [
+        1
+      ],
+      "chapter": "evidence",
+      "kind": "figure",
+      "implementation": "EvidencePlots: exact FIDs, approximate digitized compute; accessible data"
+    },
+    {
+      "id": "figure-2",
+      "title": "Figure 2 · Conditional and marginal fields",
+      "pages": [
+        3
+      ],
+      "chapter": "flow",
+      "kind": "figure",
+      "implementation": "FlowLab: sample-pair interpolation and analytic Gaussian-mixture marginal"
+    },
+    {
+      "id": "figure-3",
+      "title": "Figure 3 · Average-velocity geometry",
+      "pages": [
+        4
+      ],
+      "chapter": "average",
+      "kind": "figure",
+      "implementation": "AverageLab: draggable rotating-flow endpoints, tangent, average, displacement"
+    },
+    {
+      "id": "figure-4",
+      "title": "Figure 4 · Scaling",
+      "pages": [
+        9
+      ],
+      "chapter": "evidence",
+      "kind": "figure",
+      "implementation": "EvidencePlots: visible points only; exact 240-epoch endpoints; early FIDs approximate"
+    },
+    {
+      "id": "figure-5",
+      "title": "Figure 5 · Curated ImageNet outputs",
+      "pages": [
+        23
+      ],
+      "chapter": "evidence",
+      "kind": "figure",
+      "implementation": "SampleGallery: all 24 original embedded images, lossless PNG extraction, zoom dialog"
+    },
+    {
+      "id": "table-1",
+      "title": "Table 1 · All six ablations",
+      "pages": [
+        8
+      ],
+      "chapter": "evidence",
+      "kind": "table",
+      "implementation": "src/data/experiments.ts + searchable EvidenceTables; Table 4 also drives Architecture"
+    },
+    {
+      "id": "table-2",
+      "title": "Table 2 · ImageNet results",
+      "pages": [
+        9
+      ],
+      "chapter": "evidence",
+      "kind": "table",
+      "implementation": "src/data/experiments.ts + searchable EvidenceTables; Table 4 also drives Architecture"
+    },
+    {
+      "id": "table-3",
+      "title": "Table 3 · CIFAR-10 results",
+      "pages": [
+        9
+      ],
+      "chapter": "evidence",
+      "kind": "table",
+      "implementation": "src/data/experiments.ts + searchable EvidenceTables; Table 4 also drives Architecture"
+    },
+    {
+      "id": "table-4",
+      "title": "Table 4 · Full ImageNet configurations",
+      "pages": [
+        21
+      ],
+      "chapter": "evidence",
+      "kind": "table",
+      "implementation": "src/data/experiments.ts + searchable EvidenceTables; Table 4 also drives Architecture"
+    },
+    {
+      "id": "table-5",
+      "title": "Table 5 · Improved CFG",
+      "pages": [
+        22
+      ],
+      "chapter": "evidence",
+      "kind": "table",
+      "implementation": "src/data/experiments.ts + searchable EvidenceTables; Table 4 also drives Architecture"
+    },
+    {
+      "id": "appendix-a-imagenet",
+      "title": "Appendix A · ImageNet implementation",
+      "pages": [
+        21
+      ],
+      "chapter": "model",
+      "kind": "appendix",
+      "implementation": "Architecture and full Table 4, time embeddings, VAE scope"
+    },
+    {
+      "id": "appendix-a-cifar",
+      "title": "Appendix A · CIFAR-10 implementation",
+      "pages": [
+        21
+      ],
+      "chapter": "model",
+      "kind": "appendix",
+      "implementation": "CIFAR U-net deep dive: all reported hyperparameters and augmentation exceptions"
+    },
+    {
+      "id": "appendix-b1",
+      "title": "Appendix B.1 · Improved guidance",
+      "pages": [
+        22
+      ],
+      "chapter": "guidance",
+      "kind": "appendix",
+      "implementation": "Eq.20–21 derivation, effective scale, GuidanceLab, Table 5"
+    },
+    {
+      "id": "appendix-b2",
+      "title": "Appendix B.2 · Loss metrics",
+      "pages": [
+        22
+      ],
+      "chapter": "guidance",
+      "kind": "appendix",
+      "implementation": "Adaptive-weight lab and powered-loss gradient derivation, p=1 subtlety"
+    },
+    {
+      "id": "appendix-b3",
+      "title": "Appendix B.3 · Sufficiency proof",
+      "pages": [
+        22,
+        23
+      ],
+      "chapter": "identity",
+      "kind": "appendix",
+      "implementation": "Eq.23–24 proof with regularity and zero-diagonal boundary condition"
+    },
+    {
+      "id": "appendix-b4",
+      "title": "Appendix B.4 · JVP cost",
+      "pages": [
+        23
+      ],
+      "chapter": "training",
+      "kind": "appendix",
+      "implementation": "Forward-mode / parameter-gradient distinction, 0.045 vs 0.052 sec/iter v4-8 benchmark"
+    },
+    {
+      "id": "appendix-c",
+      "title": "Appendix C · Qualitative results",
+      "pages": [
+        23
+      ],
+      "chapter": "evidence",
+      "kind": "appendix",
+      "implementation": "Attributed gallery with curated-selection caveat"
+    },
+    {
+      "id": "context-intro",
+      "title": "Abstract, introduction, related work, background",
+      "pages": [
+        1,
+        2,
+        3
+      ],
+      "chapter": "generation",
+      "kind": "context",
+      "implementation": "Chapters 1–3 introduce generation, distributions, Flow Matching and costs"
+    },
+    {
+      "id": "context-design",
+      "title": "Design decisions and ablation interpretations",
+      "pages": [
+        7,
+        8
+      ],
+      "chapter": "guidance",
+      "kind": "context",
+      "implementation": "Sampling and loss labs; discrete experimental results, no invented continuous FID"
+    },
+    {
+      "id": "context-conclusion",
+      "title": "Related work and conclusion",
+      "pages": [
+        2,
+        6,
+        9
+      ],
+      "chapter": "perspective",
+      "kind": "context",
+      "implementation": "Diffusion, consistency, flow maps, Shortcut, IMM and coarser dynamics"
+    },
+    {
+      "id": "context-refs",
+      "title": "Acknowledgments and bibliography",
+      "pages": [
+        10,
+        11,
+        12,
+        13
+      ],
+      "chapter": "perspective",
+      "kind": "context",
+      "implementation": "Source attribution and linked original references; bibliographic entries are not separate lessons"
+    },
+    {
+      "id": "context-checklist",
+      "title": "NeurIPS checklist",
+      "pages": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "chapter": "perspective",
+      "kind": "context",
+      "implementation": "Substantive author disclosures: single runs, absent limitations/impact sections, compute, public assets and no human subjects; checklist boilerplate not repeated"
+    }
+  ],
+  "images": [
+    {
+      "file": "samples/figure5-000.png",
+      "figure": 5,
+      "page": 23,
+      "index": 1,
+      "sha256": "972524c643a51d64b81b0fa635c00ec67d7b2d7fc6ae2125ffd9eb3d6efd9923"
+    },
+    {
+      "file": "samples/figure5-001.png",
+      "figure": 5,
+      "page": 23,
+      "index": 2,
+      "sha256": "9630bb89901795829feb10c7b6b190f98b546f80ad6d19c5e9494788da80d071"
+    },
+    {
+      "file": "samples/figure5-002.png",
+      "figure": 5,
+      "page": 23,
+      "index": 3,
+      "sha256": "1b56fac4731234dcc1fce40a7e17484a04fed9d693348f40522e92ad1afa8e97"
+    },
+    {
+      "file": "samples/figure5-003.png",
+      "figure": 5,
+      "page": 23,
+      "index": 4,
+      "sha256": "3f55cebe03883918679282e1484e1ce0ab3722ceb07a8e0d5c7e94474b94318a"
+    },
+    {
+      "file": "samples/figure5-004.png",
+      "figure": 5,
+      "page": 23,
+      "index": 5,
+      "sha256": "4eb02d7e4f3e011404f51e8d30058ca7210e2710a95c6996e5c8cdd6b881c874"
+    },
+    {
+      "file": "samples/figure5-005.png",
+      "figure": 5,
+      "page": 23,
+      "index": 6,
+      "sha256": "e76e55566e78cb1c8d72c6346adac084ecbe8becbcacd8ae41bbfd0f39362185"
+    },
+    {
+      "file": "samples/figure5-006.png",
+      "figure": 5,
+      "page": 23,
+      "index": 7,
+      "sha256": "3820e987c850b7ca2bb21503e19adb13d92d90ab8c90ebe5f03314605b78eca5"
+    },
+    {
+      "file": "samples/figure5-007.png",
+      "figure": 5,
+      "page": 23,
+      "index": 8,
+      "sha256": "b1b51530862ff3766f0c8877397ecc602e83be08733c116935f5962001185959"
+    },
+    {
+      "file": "samples/figure5-008.png",
+      "figure": 5,
+      "page": 23,
+      "index": 9,
+      "sha256": "f7cfb87e76d4a450c5b251cbe0862093c341f04c35da95fae20da6f2eb624582"
+    },
+    {
+      "file": "samples/figure5-009.png",
+      "figure": 5,
+      "page": 23,
+      "index": 10,
+      "sha256": "df3cf83b887fe0c03d8c3c6b0e6aa82480471f24282e696260d4612d86fc835a"
+    },
+    {
+      "file": "samples/figure5-010.png",
+      "figure": 5,
+      "page": 23,
+      "index": 11,
+      "sha256": "f47a7d100c7bc2f4dc34674573529775064b41c578a4894edff411d1bf79e6e4"
+    },
+    {
+      "file": "samples/figure5-011.png",
+      "figure": 5,
+      "page": 23,
+      "index": 12,
+      "sha256": "9b77d221ec92a1d5fb7574da2ffcc98910191f0f585bbab4748d56c43abed312"
+    },
+    {
+      "file": "samples/figure5-012.png",
+      "figure": 5,
+      "page": 23,
+      "index": 13,
+      "sha256": "0ccf0a1286697e327fefcae6f5562eaaa5189dd81bd7cb754a4efbb80c05356d"
+    },
+    {
+      "file": "samples/figure5-013.png",
+      "figure": 5,
+      "page": 23,
+      "index": 14,
+      "sha256": "a677c81b8287f883201d9c6ab139c1da027f4598e5d8de29388bf09925b7cfa9"
+    },
+    {
+      "file": "samples/figure5-014.png",
+      "figure": 5,
+      "page": 23,
+      "index": 15,
+      "sha256": "640b25466d4e5ac1b7d727616daa3c5e5c5d456ca4e30e418596d5e53eb47900"
+    },
+    {
+      "file": "samples/figure5-015.png",
+      "figure": 5,
+      "page": 23,
+      "index": 16,
+      "sha256": "16c1bbfdb964597b1542bfb3285a8f34765862004d538742be9844987e308fd3"
+    },
+    {
+      "file": "samples/figure5-016.png",
+      "figure": 5,
+      "page": 23,
+      "index": 17,
+      "sha256": "14248dfe74ff8486cc30837b79ea3982329ea98ea4d2ea641b459b87cd491761"
+    },
+    {
+      "file": "samples/figure5-017.png",
+      "figure": 5,
+      "page": 23,
+      "index": 18,
+      "sha256": "bfc6209d8c90fa6abe63993352b4083673c781c691668ad9619f5d1ccc4a656e"
+    },
+    {
+      "file": "samples/figure5-018.png",
+      "figure": 5,
+      "page": 23,
+      "index": 19,
+      "sha256": "59837bc89be366bb1a137980b00d1b8d19884a4828fa0e38483709ac90bbd809"
+    },
+    {
+      "file": "samples/figure5-019.png",
+      "figure": 5,
+      "page": 23,
+      "index": 20,
+      "sha256": "73473f3af2978743d65ad1ad794058b7a561f88f2748d6da058abbb4c989036f"
+    },
+    {
+      "file": "samples/figure5-020.png",
+      "figure": 5,
+      "page": 23,
+      "index": 21,
+      "sha256": "2d47b4f8d0fbfb47abaa554a86d654588e545e6d5c702e560cdea54b4fefd741"
+    },
+    {
+      "file": "samples/figure5-021.png",
+      "figure": 5,
+      "page": 23,
+      "index": 22,
+      "sha256": "df615f97850abfc04698fe0bb7bacfd4e14b153354a6d9d302616ed2efc04a7d"
+    },
+    {
+      "file": "samples/figure5-022.png",
+      "figure": 5,
+      "page": 23,
+      "index": 23,
+      "sha256": "aa5dcea79c5117ff7717852dad62f7eed7f1ed5153c70d3ac5300739fc3734af"
+    },
+    {
+      "file": "samples/figure5-023.png",
+      "figure": 5,
+      "page": 23,
+      "index": 24,
+      "sha256": "c76211371728e1b1245e437158aeffa7a77d76d9d6c53d75fa96b041c6da3a8b"
+    }
+  ]
+}

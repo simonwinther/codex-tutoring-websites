@@ -1,0 +1,4 @@
+import type { Exercise, Attempt } from './types';
+export function grade(e:Exercise,response:string[]):boolean|null{if(e.grade==='rubric')return null;if(e.type==='order'||e.type==='match')return response.length===e.answer.length&&response.every((v,i)=>v===e.answer[i]);return response.length===e.answer.length&&response.every(v=>e.answer.includes(v));}
+export function evidence(attempts:Attempt[],module:string){const relevant=attempts.filter(a=>a.exerciseId.startsWith(module));const ids=new Set(relevant.filter(a=>a.correct===true&&a.hints===0).map(a=>a.exerciseId));return {attempted:new Set(relevant.map(a=>a.exerciseId)).size,demonstrated:ids.size,confidence:relevant.length?relevant.at(-1)!.confidence:null};}
+export function reviewQueue(attempts:Attempt[]){const latest=new Map<string,Attempt>();for(const a of attempts)latest.set(a.exerciseId,a);return [...latest.values()].filter(a=>a.review&&!a.reviewedAt).sort((a,b)=>a.at.localeCompare(b.at));}
