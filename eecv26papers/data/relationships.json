@@ -1,0 +1,230 @@
+[
+  {
+    "a": "transferability",
+    "b": "paraflow",
+    "label": "Generative systems",
+    "concept": "diffusion",
+    "reason": "Both act on existing generators. Transferability changes task-specific training; ParaFlow changes numerical sampling with weights fixed.",
+    "sources": [
+      {
+        "paper": "transferability",
+        "page": 3,
+        "label": "Sec. 2.1"
+      },
+      {
+        "paper": "paraflow",
+        "page": 4,
+        "label": "Algorithm 1"
+      }
+    ]
+  },
+  {
+    "a": "paraflow",
+    "b": "drift",
+    "label": "Efficient flow inference",
+    "concept": "flow",
+    "reason": "Both address iterative flow inference. ParaFlow parallelizes tentative steps; DRIFT trains residual transport and allocates sequential steps by thickness.",
+    "sources": [
+      {
+        "paper": "paraflow",
+        "page": 4,
+        "label": "Sec. 4"
+      },
+      {
+        "paper": "drift",
+        "page": 9,
+        "label": "Sec. 3.6"
+      }
+    ]
+  },
+  {
+    "a": "transferability",
+    "b": "debat",
+    "label": "Visual representations",
+    "concept": "latent",
+    "reason": "Representation choices affect what survives: shared encodings support task transfer; decoupled frequency codes preserve fine detail.",
+    "sources": [
+      {
+        "paper": "transferability",
+        "page": 5,
+        "label": "Fig. 1"
+      },
+      {
+        "paper": "debat",
+        "page": 7,
+        "label": "Fig. 3"
+      }
+    ]
+  },
+  {
+    "a": "paraflow",
+    "b": "pdf",
+    "label": "Flow matching",
+    "concept": "flow",
+    "reason": "ParaFlow solves a pretrained generative trajectory; PDF learns two task-specific fields for disease progression.",
+    "sources": [
+      {
+        "paper": "paraflow",
+        "page": 3,
+        "label": "Sec. 4"
+      },
+      {
+        "paper": "pdf",
+        "page": 8,
+        "label": "Sec. 3.2"
+      }
+    ]
+  },
+  {
+    "a": "drift",
+    "b": "sphere",
+    "label": "MRI acquisition priors",
+    "concept": "physics",
+    "reason": "DRIFT uses known thickness to condition reconstruction and schedule ODE steps. SPHERE estimates sampling parameters to construct a segmentation prior.",
+    "sources": [
+      {
+        "paper": "drift",
+        "page": 6,
+        "label": "Secs. 3.1–3.2"
+      },
+      {
+        "paper": "sphere",
+        "page": 7,
+        "label": "Sec. 3.2"
+      }
+    ]
+  },
+  {
+    "a": "drift",
+    "b": "pdf",
+    "label": "Conditional MRI flows",
+    "concept": "flow",
+    "reason": "Both use flow learning and structurally meaningful image initialization. DRIFT restores resolution; PDF forecasts future disease and separates morphology from intensity.",
+    "sources": [
+      {
+        "paper": "drift",
+        "page": 7,
+        "label": "Secs. 3.3–3.4"
+      },
+      {
+        "paper": "pdf",
+        "page": 9,
+        "label": "Inference"
+      }
+    ]
+  },
+  {
+    "a": "debat",
+    "b": "wcc4ms",
+    "label": "Haar wavelets · different roles",
+    "concept": "wavelets",
+    "reason": "DeBaT learns low/high latent representations. KernelWave modifies high-frequency coefficients to synthesize smooth/sharp training patches for segmentation.",
+    "sources": [
+      {
+        "paper": "debat",
+        "page": 8,
+        "label": "Sec. 3.2"
+      },
+      {
+        "paper": "wcc4ms",
+        "page": 6,
+        "label": "Sec. 3.2"
+      }
+    ]
+  },
+  {
+    "a": "pdf",
+    "b": "sphere",
+    "label": "Spatial deformation priors",
+    "concept": "dvf",
+    "reason": "PDF derives a warp from predicted lesion progression. SPHERE derives a structural proxy from simulated acquisition perturbations. Neither field has the same origin or purpose.",
+    "sources": [
+      {
+        "paper": "pdf",
+        "page": 9,
+        "label": "Eq. 20"
+      },
+      {
+        "paper": "sphere",
+        "page": 7,
+        "label": "Sec. 3.2"
+      }
+    ]
+  },
+  {
+    "a": "sphere",
+    "b": "c2p",
+    "label": "Medical segmentation",
+    "concept": "segmentation",
+    "reason": "Both add explicit structural information to segmentation. SPHERE uses an acquisition-related DVF; C2P uses geometry tokens and semantic concepts.",
+    "sources": [
+      {
+        "paper": "sphere",
+        "page": 8,
+        "label": "Sec. 3.3"
+      },
+      {
+        "paper": "c2p",
+        "page": 5,
+        "label": "Sec. 2.2"
+      }
+    ]
+  },
+  {
+    "a": "wcc4ms",
+    "b": "c2p",
+    "label": "Generalization across domains",
+    "concept": "generalization",
+    "reason": "WCC4MS handles mixed supervision and frequency shifts; C2P addresses multimodal conflicts with geometry/semantic tokens. Annotation and deployment assumptions differ.",
+    "sources": [
+      {
+        "paper": "wcc4ms",
+        "page": 11,
+        "label": "Table 3"
+      },
+      {
+        "paper": "c2p",
+        "page": 11,
+        "label": "Table 2"
+      }
+    ]
+  },
+  {
+    "a": "sphere",
+    "b": "wcc4ms",
+    "label": "Acquisition-related robustness",
+    "concept": "generalization",
+    "reason": "Both tackle image-formation variation. SPHERE recovers MRI sampling parameters; WCC4MS simulates CT-like frequency shifts without estimating true reconstruction kernels.",
+    "sources": [
+      {
+        "paper": "sphere",
+        "page": 7,
+        "label": "Sec. 3.2"
+      },
+      {
+        "paper": "wcc4ms",
+        "page": 14,
+        "label": "Mechanism validation"
+      }
+    ]
+  },
+  {
+    "a": "pdf",
+    "b": "c2p",
+    "label": "Explicit lesion geometry",
+    "concept": "geometry",
+    "reason": "PDF needs a baseline lesion mask to forecast evolution; C2P predicts masks and learned geometric attributes. Connecting them into a pipeline would be a new experiment, not a result of either paper.",
+    "sources": [
+      {
+        "paper": "pdf",
+        "page": 9,
+        "label": "Inference"
+      },
+      {
+        "paper": "c2p",
+        "page": 8,
+        "label": "Sec. 2.4"
+      }
+    ]
+  }
+]

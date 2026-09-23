@@ -1,0 +1,434 @@
+[
+  {
+    "paper": "transferability",
+    "sourcePdf": "ECCV26_01_Transferability.pdf",
+    "id": "architecture",
+    "page": 5,
+    "figure": "Figure 1",
+    "bounds": [
+      132,
+      112,
+      484,
+      232
+    ],
+    "captionPrefix": "Fig. 1:",
+    "purpose": "Compare routes for sharing knowledge",
+    "look": "Follow which encoder and transformer are shared across tasks.",
+    "conclusion": "Lumina-DiMOO is the fully shared configuration tested; the drawing alone is not evidence of transfer.",
+    "main": true
+  },
+  {
+    "paper": "transferability",
+    "sourcePdf": "ECCV26_01_Transferability.pdf",
+    "id": "counting",
+    "page": 8,
+    "figure": "Figure 3",
+    "bounds": [
+      132,
+      112,
+      484,
+      282
+    ],
+    "captionPrefix": "Fig. 3:",
+    "purpose": "Separate skill accuracy from visual quality",
+    "look": "Compare the same prompts across baseline, understanding transfer, and direct generation.",
+    "conclusion": "The examples illustrate preservation of visual style; use Table 2 for aggregate performance.",
+    "main": false
+  },
+  {
+    "paper": "transferability",
+    "sourcePdf": "ECCV26_01_Transferability.pdf",
+    "id": "spatial",
+    "page": 10,
+    "figure": "Figure 5",
+    "bounds": [
+      132,
+      112,
+      484,
+      284
+    ],
+    "captionPrefix": "Fig. 5:",
+    "purpose": "See the distribution-shift trade-off",
+    "look": "Look for pasted-object appearance in the direct generation column.",
+    "conclusion": "Transfer and direct fine-tuning have different quality/accuracy trade-offs, not a universal winner.",
+    "main": false
+  },
+  {
+    "paper": "sphere",
+    "sourcePdf": "ECCV26_02_SPHERE.pdf",
+    "id": "architecture",
+    "page": 5,
+    "figure": "Figure 3",
+    "bounds": [
+      132,
+      112,
+      484,
+      350
+    ],
+    "captionPrefix": "Fig. 3:",
+    "purpose": "Trace acquisition recovery into segmentation",
+    "look": "Follow panels (a) recovery, (b) DVF construction, (c) segmentation, and (d) prior injection.",
+    "conclusion": "The predicted acquisition variables matter through the spatial prior used by DPM.",
+    "main": true
+  },
+  {
+    "paper": "sphere",
+    "sourcePdf": "ECCV26_02_SPHERE.pdf",
+    "id": "dvf",
+    "page": 7,
+    "figure": "Figure 4",
+    "bounds": [
+      185,
+      112,
+      430,
+      194
+    ],
+    "captionPrefix": "Fig. 4:",
+    "purpose": "Understand what a DVF represents",
+    "look": "Compare artifact magnitude, gradient energy, and vector directions.",
+    "conclusion": "These are different representations; the field is a structural proxy, not measured tissue movement.",
+    "main": false
+  },
+  {
+    "paper": "sphere",
+    "sourcePdf": "ECCV26_02_SPHERE.pdf",
+    "id": "ablation",
+    "page": 13,
+    "figure": "Table 6",
+    "bounds": [
+      132,
+      113,
+      484,
+      340
+    ],
+    "captionPrefix": "Table 6:",
+    "purpose": "Test whether spatial organization matters",
+    "look": "Compare Base, Shuffle-DVF, and SPHERE; paired values are BraTS 2023 / BraTS 2019.",
+    "conclusion": "An arbitrary extra field does not explain the gain: shuffled fields underperform the baseline.",
+    "main": false
+  },
+  {
+    "paper": "pdf",
+    "sourcePdf": "ECCV26_03_PhysicsGroundedFlow.pdf",
+    "id": "concept",
+    "page": 2,
+    "figure": "Figure 1",
+    "bounds": [
+      132,
+      112,
+      484,
+      291
+    ],
+    "captionPrefix": "Fig. 1:",
+    "purpose": "Separate morphology from appearance",
+    "look": "Follow the two branches under the observed longitudinal series.",
+    "conclusion": "Shape evolution and intensity change are modeled as complementary processes.",
+    "main": false
+  },
+  {
+    "paper": "pdf",
+    "sourcePdf": "ECCV26_03_PhysicsGroundedFlow.pdf",
+    "id": "architecture",
+    "page": 7,
+    "figure": "Figure 3",
+    "bounds": [
+      132,
+      112,
+      484,
+      297
+    ],
+    "captionPrefix": "Fig. 3:",
+    "purpose": "Connect training losses to inference",
+    "look": "Compare the training panels on top with the sequential deployment path below.",
+    "conclusion": "The PDE projection belongs to training; inference composes morphology, warp, and intensity.",
+    "main": true
+  },
+  {
+    "paper": "pdf",
+    "sourcePdf": "ECCV26_03_PhysicsGroundedFlow.pdf",
+    "id": "ablation",
+    "page": 14,
+    "figure": "Table 3",
+    "bounds": [
+      132,
+      228,
+      495,
+      322
+    ],
+    "captionPrefix": "Table 3:",
+    "purpose": "Measure the effect of the physics penalty",
+    "look": "Compare with/without PDE rows across all three datasets.",
+    "conclusion": "The regularizer improves lesion metrics, but its incremental contribution is smaller than the complete method comparison.",
+    "main": false
+  },
+  {
+    "paper": "drift",
+    "sourcePdf": "ECCV26_04_DRIFT.pdf",
+    "id": "concept",
+    "page": 4,
+    "figure": "Figure 1",
+    "bounds": [
+      132,
+      112,
+      484,
+      276
+    ],
+    "captionPrefix": "Fig. 1:",
+    "purpose": "See the two reasons for fewer steps",
+    "look": "Compare random-noise and APN initialization, then easy and hard acquisition conditions.",
+    "conclusion": "Initialization shortens the path; scheduling changes its numerical budget.",
+    "main": false
+  },
+  {
+    "paper": "drift",
+    "sourcePdf": "ECCV26_04_DRIFT.pdf",
+    "id": "architecture",
+    "page": 5,
+    "figure": "Figure 2",
+    "bounds": [
+      132,
+      112,
+      484,
+      335
+    ],
+    "captionPrefix": "Fig. 2:",
+    "purpose": "Separate the two training stages",
+    "look": "Find the frozen APN, straight interpolation path, and proximal-thickness CETA pair.",
+    "conclusion": "CETA is a training constraint; it is not an additional inference network.",
+    "main": true
+  },
+  {
+    "paper": "drift",
+    "sourcePdf": "ECCV26_04_DRIFT.pdf",
+    "id": "efficiency",
+    "page": 14,
+    "figure": "Figure 6",
+    "bounds": [
+      305,
+      112,
+      484,
+      238
+    ],
+    "captionPrefix": "Fig. 6:",
+    "purpose": "Compare NFE and reconstruction quality",
+    "look": "Compare DRIFT across ×2, ×6 and ×8; keep the axes and metric directions in mind.",
+    "conclusion": "A step budget is thickness-dependent, and velocity NFEs do not count the APN cost.",
+    "main": false
+  },
+  {
+    "paper": "c2p",
+    "sourcePdf": "ECCV26_05_C2P.pdf",
+    "id": "paradigms",
+    "page": 2,
+    "figure": "Figure 1",
+    "bounds": [
+      32,
+      32,
+      383,
+      211
+    ],
+    "captionPrefix": "Fig. 1:",
+    "purpose": "Locate C2P among segmentation paradigms",
+    "look": "Separate manual prompts, reference images, and learned internal concepts.",
+    "conclusion": "Prompt-free deployment is a claim about interaction, not absence of training supervision.",
+    "main": false
+  },
+  {
+    "paper": "c2p",
+    "sourcePdf": "ECCV26_05_C2P.pdf",
+    "id": "architecture",
+    "page": 5,
+    "figure": "Figure 2",
+    "bounds": [
+      32,
+      32,
+      383,
+      180
+    ],
+    "captionPrefix": "Fig. 2:",
+    "purpose": "Trace concepts into pixel predictions",
+    "look": "Find SCFM, bidirectional attention, TGDH and the two supervision targets.",
+    "conclusion": "Geometry and semantics meet in the head, but have different training signals.",
+    "main": true
+  },
+  {
+    "paper": "c2p",
+    "sourcePdf": "ECCV26_05_C2P.pdf",
+    "id": "consensus",
+    "page": 8,
+    "figure": "Figure 3",
+    "bounds": [
+      182,
+      110,
+      382,
+      210
+    ],
+    "captionPrefix": "Fig. 3:",
+    "purpose": "See inference-time reliability weighting",
+    "look": "Compare mask-derived attributes against GEO predictions across flipped views.",
+    "conclusion": "Disagreement lowers a view’s weight; no ground-truth mask is consulted at inference.",
+    "main": false
+  },
+  {
+    "paper": "paraflow",
+    "sourcePdf": "ECCV26_06_ParaFlow.pdf",
+    "id": "algorithm",
+    "page": 4,
+    "figure": "Algorithm 1",
+    "bounds": [
+      105,
+      84,
+      507,
+      264
+    ],
+    "captionPrefix": "Algorithm 1:",
+    "purpose": "Follow the actual sampler",
+    "look": "Find the parallel velocity evaluation, convergence stride, and window update.",
+    "conclusion": "This PDF contains an algorithm rather than a main architecture figure; it is the authoritative method visual.",
+    "main": true
+  },
+  {
+    "paper": "paraflow",
+    "sourcePdf": "ECCV26_06_ParaFlow.pdf",
+    "id": "progression",
+    "page": 6,
+    "figure": "Figure 1",
+    "bounds": [
+      105,
+      90,
+      507,
+      249
+    ],
+    "captionPrefix": "Figure 1:",
+    "purpose": "Compare progress per sequential iteration",
+    "look": "Read top as Euler and bottom as ParaFlow at the labelled iteration counts.",
+    "conclusion": "At an equal iteration index, ParaFlow may have done more total model evaluations.",
+    "main": false
+  },
+  {
+    "paper": "paraflow",
+    "sourcePdf": "ECCV26_06_ParaFlow.pdf",
+    "id": "window",
+    "page": 9,
+    "figure": "Table 5",
+    "bounds": [
+      105,
+      82,
+      507,
+      203
+    ],
+    "captionPrefix": "Table 5:",
+    "purpose": "Expose the latency/compute trade-off",
+    "look": "Track window size, iterations, NFE and time together.",
+    "conclusion": "A larger parallel window does not monotonically improve measured latency; window 8 is best among these settings.",
+    "main": false
+  },
+  {
+    "paper": "debat",
+    "sourcePdf": "ECCV26_07_DeBaT.pdf",
+    "id": "designs",
+    "page": 5,
+    "figure": "Figure 2",
+    "bounds": [
+      132,
+      112,
+      484,
+      261
+    ],
+    "captionPrefix": "Fig. 2:",
+    "purpose": "Distinguish wavelet tokenizer designs",
+    "look": "Compare shared latent codes with DeBaT’s independently learned bands.",
+    "conclusion": "The central difference is decoupled optimization, not simply the presence of a wavelet transform.",
+    "main": false
+  },
+  {
+    "paper": "debat",
+    "sourcePdf": "ECCV26_07_DeBaT.pdf",
+    "id": "architecture",
+    "page": 7,
+    "figure": "Figure 3",
+    "bounds": [
+      132,
+      112,
+      484,
+      236
+    ],
+    "captionPrefix": "Fig. 3:",
+    "purpose": "Trace the frequency-aware latent pathway",
+    "look": "Follow low/high encoders, distinct losses, fused latents and separate decoders.",
+    "conclusion": "The learned latents, not raw bands, form the generative model’s representation.",
+    "main": true
+  },
+  {
+    "paper": "debat",
+    "sourcePdf": "ECCV26_07_DeBaT.pdf",
+    "id": "errors",
+    "page": 11,
+    "figure": "Figure 4",
+    "bounds": [
+      132,
+      374,
+      484,
+      560
+    ],
+    "captionPrefix": "Fig. 4:",
+    "purpose": "Look for where detail is lost",
+    "look": "Inspect the error maps around faces, patterned clothing and printed text.",
+    "conclusion": "These examples explain the band-error metrics; they do not independently establish all generation claims.",
+    "main": false
+  },
+  {
+    "paper": "wcc4ms",
+    "sourcePdf": "ECCV26_08_WCC4MS3DSeg.pdf",
+    "id": "motivation",
+    "page": 2,
+    "figure": "Figure 1",
+    "bounds": [
+      132,
+      112,
+      484,
+      374
+    ],
+    "captionPrefix": "Fig. 1:",
+    "purpose": "Understand the label/domain interaction",
+    "look": "Compare aligned and misaligned weak-label additions and the unseen-domain diagram.",
+    "conclusion": "The motivation is joint annotation efficiency and domain robustness, not merely a larger dataset.",
+    "main": false
+  },
+  {
+    "paper": "wcc4ms",
+    "sourcePdf": "ECCV26_08_WCC4MS3DSeg.pdf",
+    "id": "architecture",
+    "page": 5,
+    "figure": "Figure 2",
+    "bounds": [
+      132,
+      112,
+      484,
+      321
+    ],
+    "captionPrefix": "Fig. 2:",
+    "purpose": "Trace augmentation and annotation routing",
+    "look": "Follow smooth/sharp variants into the mask/box supervision branches and auxiliary losses.",
+    "conclusion": "The crowded training diagram is larger than the deployment path, which retains only segmentation.",
+    "main": true
+  },
+  {
+    "paper": "wcc4ms",
+    "sourcePdf": "ECCV26_08_WCC4MS3DSeg.pdf",
+    "id": "ratios",
+    "page": 13,
+    "figure": "Figure 4",
+    "bounds": [
+      166,
+      253,
+      454,
+      430
+    ],
+    "captionPrefix": "Fig. 4:",
+    "purpose": "See why more weak labels is not always better",
+    "look": "Follow the peak and subsequent decline as box share increases.",
+    "conclusion": "There is an annotation-balance trade-off; abundant boxes do not replace precise boundaries.",
+    "main": false
+  }
+]

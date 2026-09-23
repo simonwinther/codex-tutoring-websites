@@ -1,0 +1,11 @@
+export type Source = {page:number;label:string};
+export type Claim = {text:string;source:Source;kind:string};
+export type Stage = {label:string;input:string;action:string;why:string;output:string;source:Source;status:string};
+export type Result = {metric:string;dataset:string;baseline:string;before:number;after:number;direction:string;source:Source;note:string;proposed:string|null};
+export type Equation = {title:string;latex:string;symbols:string[];plain:string;why:string;source:Source};
+export type Question = {level:string;question:string;hint:string;answer:string;source:Source};
+export type Dimension = {id:string;role:string;text:string;source:Source};
+export type Paper = {id:string;short:string;number:string;filename:string;title:string;category:string;task:string;color:string;position:number[];concepts:string[];sentence:Claim;problem:Claim;core:Claim[];io:Claim;why:Claim;caution:Claim;novelty:Claim[];existing:Claim;stages:Stage[];training:Claim[];inference:Claim[];results:Result[];limitations:Claim[];equations:Equation[];equationNote?:string;dimensions:Dimension[];takeaway:string;comparison:Record<string,Claim>;questions:Question[]};
+export type Figure = {paper:string;sourcePdf:string;id:string;page:number;figure:string;bounds:number[];captionPrefix:string;purpose:string;look:string;conclusion:string;main:boolean;caption:string;file:string;vector:string;dpi:number;sourceHash:string};
+export type Concept = {id:string;name:string;definition:string;caveat:string;uses:{paper:string;role:string;source:Source}[]};
+export type Relationship = {a:string;b:string;label:string;concept:string;reason:string;sources:(Source & {paper:string})[]};

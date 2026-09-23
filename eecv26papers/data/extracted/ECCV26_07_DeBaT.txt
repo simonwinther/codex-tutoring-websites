@@ -1,0 +1,1699 @@
+=== PDF PAGE 1 ===
+                  Decoupling High and Low Frequencies for
+                   Faithful Image Generation with Fine Details
+
+
+                             Tejaswini Medi1   , Hsien-Yi Wang1, Arianna Rampini2, and Margret
+                                                       Keuper1,3
+
+                                                         1 University of Mannheim, Germany
+                                                                   2 Autodesk AI Lab
+                                   3 MPI for Informatics, Saarland Informatics Campus, Saarbrücken, Germany
+                                         {tejaswini.medi,keuper}@uni-mannheim.de2026
+
+
+                             Abstract. Latent generative models compress images into learned em-Aug                           beddings prior to synthesis, and the generation quality critically depends
+20                        onthathowwhilefaithfullysuch embeddingsthese embeddingsare effectivepreserveat reconstructingvisual detail.lowWefrequencyobserve
+                                    structure, they struggle to recover sharp high frequency details that are
+                                     essential for perceptual realism. Conventional reconstruction objectives
+                                    implicitly prioritize coarse structural information over high frequency
+                                  content, which can lead to overly smoothed outputs and degraded vi-
+                                   sual quality in textured regions. Motivated by this observation, we pro-
+                               pose DeBaT, a Decoupled frequency Band Tokenizer that explicitly sep-[cs.CV]                              arates the learning of low and high frequency band embeddings. This
+                                decoupling enables accurate reconstruction of fine details while preserv-
+                                  ing global coherence. Integrated into a latent diffusion based generative
+                               model, DeBaT allows for sharper and more realistic samples than previ-
+                               ous latent tokenizers, confirming that the explicit decoupling of high and
+                               low frequency bands eases the preservation of visual details in learned
+                             embedding spaces.
+
+                          Keywords: Latent Tokenizer · High-Frequency Details
+
+
+                1  Introduction
+
+                       Latent generative modeling [4,9,30,66] has become a central paradigm in mod-
+                        ern content generation, enabling the synthesis of high fidelity visual data. These
+                      models typically operate in compressed latent spaces learned through varia-arXiv:2509.05441v4
+                           tional autoencoders such as VAEs [23, 28], where generation quality depends
+                             critically on the expressiveness and reconstruction fidelity of the latent represen-
+                           tations. Increasing latent dimensionality can enhance representational capacity,
+                      but often yields diminishing visual generation improvements together with signif-
+                          icantly higher computational cost. VAVAE [56] highlights this as an optimization
+                     dilemma inherent in latent modeling: pixel level reconstruction objectives favor
+                            faithful reconstruction as capacity increases, whereas generative objectives re-
+                         quire semantically structured latent spaces. By aligning latents with pretrained
+
+=== PDF PAGE 2 ===
+2      T. Medi et al.
+
+
+                                                original        VA-VAE     DeBaT (ours)            original        VA-VAE       DeBaT(ours)
+
+
+
+
+
+Fig. 1: Reconstruction quality for two examples. We compare the reconstruction of
+VA-VAE to our approach DeBaT. Highlighted regions emphasize textures and edges.
+DeBaT better preserves high-frequency details and sharp structures, producing recon-
+structions visually closer to the input. Arrows indicate reconstruction errors.
+
+
+vision foundation models, VAVAE improves convergence and semantic realism.
+However, despite these advances, VAVAE often lacks to faithfully reconstruct
+sharp textures and fine details, particularly in regions dominated by high fre-
+quency content such as text, as shown in  Figure 1. In this work, we propose
+a simple yet effective approach to learn detail preserving latent embeddings,
+Decoupled frequency Band Tokenizer (DeBaT).
+
+   Our proposed approach is motivated by a comprehensive frequency based
+analysis of the reconstruction behavior of state-of-the-art latent tokenizers, which
+serve as the foundation of modern latent generative pipelines [28,48,51,52,56].
+For this analysis, we focus on latent diffusion and autoregressive models, which
+represent the current frontier of high quality visual generation. These methods
+typically follow a two stage design: a latent tokenizer, often implemented as a
+VAE variant, learns quantized or continuous embeddings, and a probabilistic
+generative model is subsequently trained within this latent space.
+
+   Our spectral analysis uncovers a consistent limitation. While different tok-
+enizers vary in their ability to reconstruct low frequency structure, their high
+frequency reconstruction error remains strikingly similar across architectures, i.e.
+they become ever better at encoding semantic properties and global coherence.
+At the same time, high frequency components, which encode perceptually critical
+information such as textures and fine structural details and are therefore equally
+important for perceptual realism, are systematically under-reconstructed. This
+reveals a fundamental imbalance in current latent tokenizers: they are optimized
+for structural faithfulness but not for fine detail preservation.
+
+   To faithfully encode fine details, i.e. high-frequency information, our pro-
+posed DeBaT (Decoupled frequency Band Tokenizer) explicitly separates and
+independently optimizes low and high frequency components via wavelet de-
+composition. Unlike conventional tokenizers that operate purely in the spatial
+domain, DeBaT performs an explicit frequency band decomposition and learns
+distinct latent embeddings for low and high frequency components. This en-
+ables faithful reconstruction of fine textures while preserving global structural
+coherence. Figure 1 illustrates a visual comparison with VA-VAE, demonstrat-
+ing improved preservation of sharp structures and high frequency details. By
+integrating DeBaT into a lightweight latent diffusion model, LightningDiT, we
+
+=== PDF PAGE 3 ===
+                                                 DeBaT      3
+
+
+observe that improved spectral reconstruction directly translates into high qual-
+ity realistic generative samples.
+
+
+Our main contributions are summarized as follows:
+
+ ✓We present a comprehensive frequency-based reconstruction evaluation of la-
+    tent tokenizers used in modern generative pipelines. Our analysis reveals that
+   improvements in overall reconstruction performance are primarily driven by
+   enhanced low-frequency reconstruction, while high-frequency details remain
+    under-preserved across both spatial and spectral latent tokenizers.
+ ✓We propose DeBaT, a Decoupled frequency Band Tokenizer that explicitly
+    separates and independently optimizes low- and high-frequency components
+    via wavelet decomposition. By mitigating spectral optimization coupling,
+   DeBaT learns frequency-aware and more expressive latent representations
+    that preserve both global structure and fine details.
+ ✓We integrate DeBaT into LightningDiT and demonstrate improved genera-
+    tive quality on ImageNet. Our results highlight the importance of frequency-
+   aware latent modeling for achieving sharper and more perceptually realistic
+   image reconstruction and synthesis.
+
+
+2  Related Work
+
+2.1  Latent Embeddings for Image Generation
+
+Latent representation learning models, or visual tokenizers, are widely used
+to learn compressed latent representations that capture high-dimensional vi-
+sual data and enable efficient generation. Encoder-Decoder frameworks such as
+VAEs [23] and their variants form the foundation for learning these latent rep-
+resentations, which are vital for modeling latent generative models. Notably,
+Latent Diffusion Models (LDMs) [42] operate over learned latent embeddings
+to facilitate high-quality synthesis, highlighting the importance of effective la-
+tent space modeling. Discrete tokenization techniques, such as VQ-VAE [33,50],
+convert images into latent code sequences that can be effectively modeled by
+transformers. VQGAN [1] further improves this framework by incorporating ad-
+versarial losses to learn perceptually meaningful tokens, while RQ-VAE [27] en-
+hances the expressiveness of embeddings through stacked residual quantizers.
+Recent methods such as TiTok [58], FlexTok [2], and OneDPiece [34] explore
+compact and adaptive tokenization strategies, aiming for better compression
+and controllable generation quality.
+   To enhance reconstruction quality of visual tokenizers, hierarchical and reg-
+ularized latent representation learning models have been proposed. NVAE [49]
+introduces spectral regularization within residual hierarchies for stable training,
+while HQ-VAE [47] and VAR [48] use multi-scale vector quantization to better
+model local and global structure in latent spaces. EQ-VAE [25] imposes equiv-
+ariance constraints for robustness to geometric changes. Additionally, frequency-
+aware losses such as Fourier-based regularization [3] and scale-equivariant decod-
+
+=== PDF PAGE 4 ===
+4      T. Medi et al.
+
+
+ing [44] have been used to control the spectral properties of the latent recon-
+structions. A parallel direction focuses on aligning latent spaces with external
+vision encoders. For example, REPA [59] introduces denoising-time regulariza-
+tion based on foundation model features to accelerate convergence. VA-VAE [56]
+builds on this by jointly aligning tokenizer latents with pretrained features and
+optimizing for downstream generation quality. ReaLS [53] introduces semantic
+priors directly into the latent space to improve representation capacity. Our work
+builds on VA-VAE but identifies that such alignment alone does not sufficiently
+preserve high frequency fine details. We propose an explicit decoupling and op-
+timization of low- and high-frequencies during tokenization, leading to improved
+fidelity in both latent space representation, and by consequence in reconstruction
+and generation quality.
+
+
+2.2  High-Frequency Content in Image Reconstruction & Synthesis
+
+High-frequency content is essential for perceptual realism but challenging to
+reconstruct, particularly for diffusion-based models. Prior analyses show that
+frequency components are not reconstructed uniformly across the denoising tra-
+jectory [54], resulting in a loss of textures and sharp structures. To address
+this, various frequency-aware approaches have been developed across genera-
+tive paradigms. In GANs, SWAGAN [10] and WaveFill [60] integrate wavelet
+transforms into their architectures to improve generation  fidelity. Focal fre-
+quency loss [19] and WINE [21] address frequency imbalance by reweighting
+reconstruction errors and correcting low-frequency bias in inversion, respec-
+tively. Diffusion models have incorporated frequency priors at both training
+and inference time. WaveDiff [40], Spatial-Frequency UNet [61], and spectral
+diffusion approaches [13,54] integrate wavelet-domain frequency components or
+gating mechanisms into the network to better optimize the spectral content.
+Training-free techniques like DiffuseHigh [22] and frequency aggregation [41] in-
+ject wavelet-based frequency priors during inference for improved detail preser-
+vation. Additional strategies include replacing convolutions with filtered vari-
+ants in FouriScale [15], and autoregressive frequency modeling in NFIG [16].
+Adaptations also exist for domain-specific tasks such as high-resolution [62],
+underwater [64], or low-light image generation [18]. Beyond images, wavelet rep-
+resentations have further proven useful in 3D generation with diffusion and au-
+toregressive models [17,32], suggesting the utility of wavelet decompositions as
+a general tool for capturing fine-scale structure across visual modalities. While
+effective, these approaches typically introduce additional architectural compo-
+nents or post-processing steps to compensate for frequency degradation.
+   Prior wavelet based decomposition approaches such as WF-VAE [29] (for
+video generation) and LiteVAE [43] incorporate wavelet transforms into the en-
+coding and decoding process to enhance multi scale feature extraction and im-
+prove reconstruction efficiency. Leveraging the compression properties of wavelets,
+these methods optimize frequency components jointly within a shared latent
+space and under a unified objective. As a result, they inherit the same fre-
+quency optimization coupling observed in spatial domain tokenizers, where low
+
+=== PDF PAGE 5 ===
+                                                 DeBaT      5
+
+
+         LiteVAE                 WF-VAE                DeBaT (ours)
+
+                                                                                                                                                                                      Decoupled Bands
+                     3 Stage                                                               3 Stage                                                                   1 Stage
+                                                                                                                                                                                    Wavelet                                                                                                     Wavelet                        Wavelet                                                                                                                                                                                                                    LL      LHHLHH                                                                                                                                                                               Transform                                                                                                  Transform                      Transform
+
+
+         Encoder              Encoder              Encoder                         Encoder              Encoder              Encoder                         Low Freq.            High Freq.
+          Stage1                 Stage 2                Stage 3                            Stage1                 Stage 2                Stage 3                                 Encoder              Encoder
+
+
+
+
+                             Feature Aggregation
+                                 across Stages                                                                                     Latent Representation                                                         Latent Representation
+
+
+                                               Latent Representation
+
+
+                                                                                  Decoder              Decoder             Decoder                        Low Freq.            High Freq.
+                                                                                          Stage1                 Stage 2                Stage 3                                Decoder              Decoder
+                                         Decoder
+
+
+
+                          Inverse                                                                              Inverse                                                                               Inverse
+                                                                                                      Wavelet                                                                                                                                                                                   Wavelet                        Wavelet                                                                                                                                                                                                                    LL      LHHLHH                                                                                                   Transform                                                                                                                                                                              Transform                      Transform
+
+multiple stages, coupled bands    multiple stages, coupled bands    single stage, decoupled bands
+
+Fig. 2: Comparison of wavelet based latent VAE tokenizer designs. Previous works
+for image (VA-VAE) and video (WF-VAE) generation leverage spatial compression
+properties of multiple wavelet stages, while low and high frequency bands are coupled
+in a joint latent code. We propose DeBaT, which preserves fine details by learning
+explicit latent codes for low and for high frequency bands through decoupled VAEs.
+
+
+
+frequency components dominate over the learning of fine detail. In contrast, our
+approach DeBaT explicitly decouples the learning dynamics of low and high
+frequency bands by allocating separate latent embeddings and optimizing them
+independently prior to fusion. Figure 2 compares DeBaT to different frequency
+based latent tokenizer models that use wavelet decomposition. By modeling and
+optimizing frequency subbands (low and high) separately during tokenization,
+we improve the frequency aware expressivity in the latent embeddings. These
+latent embeddings improve both reconstruction fidelity and downstream synthe-
+sis quality when integrated with the latent generative pipeline without requiring
+any architectural changes at generation time.
+
+
+3  Method
+
+
+In this section, we present the key components of our approach. First, we con-
+duct a frequency-based reconstruction evaluation of latent embeddings used in
+modern latent image generative pipelines. Our analysis shows that improve-
+ments in reconstruction performance primarily arise from better modeling of
+low-frequency structures, while high-frequency components remain compara-
+tively underrepresented. This imbalance indicates that latent tokenizers jointly
+optimized over both low- and high-frequency information tend to bias the opti-
+mization toward low-frequency content, often resulting in the loss of fine-grained
+image details. Second, we introduce DeBaT, a novel framework that leverages
+wavelet decomposition to decouple latent representations into low- and high-
+frequency components, enabling them to be optimized independently. Third, we
+propose a simple yet effective fusion strategy that combines these frequency-
+aware representations into a unified latent embedding, which is subsequently
+
+=== PDF PAGE 6 ===
+6      T. Medi et al.
+
+
+integrated into the lightweight LightningDiT pipeline [56]. This design enables
+improved image generation by explicitly modeling frequencies in the latent space.
+An overview of the proposed DeBaT framework is shown in Figure 3.
+
+
+3.1  Frequency Reconstruction Evaluation of Latent Tokenizers
+
+In most latent generative models, the first stage involves learning compact latent
+representations using visual tokenizers such as VAEs or VQ-VAEs and their
+architectural variants. These tokenizers learn latent embeddings  \    mathbf{Z}that
+encode the underlying structure of the input data  \   mathbf{X}. A common measure
+of the representational quality of these latent embeddings is their reconstruction
+performance, typically evaluated using mean squared error (MSE) or the         \ell_2-
+reconstruction loss. The reconstruction objective is defined as:
+
+                                         \m a th c al {L}_{\text\|\mathbf{\mathbf
+
+where \ h at    {\mathbf=D(E(\mathbf{x}))denotes the reconstructed image obtained by encoding the
+input     {x}into a latent embedding \ mathbf=E(\mathbf{x})with encoder Eand subsequently de-
+coding it using the decoder D. While this objective provides a measure of overall
+reconstruction quality, it does not explicitly evaluate how well different frequency
+components of the image are reconstructed. In particular, the reconstruction
+error does not distinguish between low-frequency structural information and
+high-frequency details such as edges and textures. As a result, improvements in
+reconstruction performance may primarily reflect better recovery of dominant
+low-frequency content, while the fidelity of high-frequency components remains
+underexplored. To assess the fidelity of reconstructions across frequency bands,
+we perform a frequency-aware reconstruction analysis using the discrete wavelet
+transform (DWT) with a Haar wavelet filter. Specifically, we decompose both the
+input image and its reconstruction into low- and high-frequency representations.
+Let           \mathcal{W}(\cdot)denote the wavelet decomposition operator:
+
+                     \m a thca l  {W  }(\ma t hbf  { x})  =(\mathbf\mathbf\quad\mathcal{\mathbf{\mathbf{\mathbf
+
+where           \mathbf{x}_Land \hat{x}}_Lcorrespond to the low-frequency (approximation) components,
+while         \mathbf{x}_Hand \hat{x}}_Hcorrespond to the high-frequency (detail) components of the in-
+put and reconstructed images, respectively. We then compute frequency-specific
+reconstruction losses as follows:
+
+            \ mat h cal {L}   _{ L } =   \|\mathbf{\mathbf\qquad\mathcal\|\mathbf{\mathbf
+   These metrics provide a more fine-grained evaluation of latent representations
+by measuring their ability to reconstruct structural information and fine details
+independently. Unlike conventional reconstruction objectives that aggregate er-
+rors across all spatial frequencies into a single pixel-space metric, our analysis
+explicitly separates the contribution of low- and high-frequency components.
+This allows us to reveal frequency-specific reconstruction in latent tokenizers
+that remain hidden under standard pixel based reconstruction losses. In partic-
+ular, it enables a more principled understanding of whether improvements in
+
+=== PDF PAGE 7 ===
+                                                 DeBaT      7
+
+
+                                                                                                                                                Freq.
+                                                                                      Low  Encoder                                               Freq.Low  Decoder                      Inverse                       Haar                 LL
+                        Wavelet                                                                       Wavelet
+                      Transform                                                                   Transform
+                                                                                                                                                Freq.                                                      Freq.
+                                 LHHL                                                                         LHLHHL                                                                                                                                                                                                                  Encoder                                      High  Decoder                                 HH           High                                                                   HH
+
+                                Decoupled Bands                                 Decoupled Bands       ,
+                                                                           ,                                           with Separate Losses         ,
+
+
+
+                                         Latent Diﬀusion
+
+Fig. 3: Overview of the proposed DeBaT framework. An input image x is first de-
+composed using a discrete wavelet transform into low- and high-frequency components.
+Each frequency band is processed independently using dedicated encoder–decoder pairs
+(EL, DL) and (EH, DH) to learn specialized latent embeddings that capture global
+structure and fine details, respectively. The reconstructed frequency components are
+then fused through an inverse wavelet transform to obtain the final image ˆx.
+
+
+
+reconstruction quality arise from better modeling of global structures or from
+enhanced preservation of high-frequency details.
+   Beyond pixel-wise reconstruction loss, we also evaluate perceptual quality us-
+ing the Learned Perceptual Image Patch Similarity (LPIPS) metric [63]. LPIPS
+measures perceptual similarity between input and reconstructed images using
+deep feature representations and better reflects human visual perception than
+pixel-space metrics. To further quantify the overall quality of latent reconstruc-
+tions, we compute the reconstruction Fréchet Inception Distance (rFID) [14].
+This metric compares the distributions of original and reconstructed images in
+the feature space of a pretrained Inception network [46].
+
+                            |             \t e xt { rFID} =  \ \m u    _{ \ m athbf {x}}   -\mu{\mathbf{Tr}\!\left\Sigma_{\mathbf\Sigma{\mathbf2\left\Sigma_{\mathbf\Sigma{\mathbf
+
+   where  (\m u            _{\mathbf{x}}) and  (\mu      _{\hat{x}}}) denote the mean and covariance of Inception
+features extracted from the original and reconstructed image distributions, re-
+spectively. Together, the frequency-aware reconstruction losses (\m athcal,{L}_H) percep-
+tual similarity   \mathcal, and distributional alignment measured by rFID provide a
+comprehensive evaluation of reconstruction quality. In particular, this combina-
+tion enables us to analyze both the perceptual fidelity and the frequency-specific
+reconstruction behavior of latent embeddings.
+
+
+3.2  Decoupled Band Tokenizer (DeBaT)
+
+To enable frequency-aware optimization in latent tokenizers, we extend the stan-
+dard VAE-based tokenizer by operating directly on frequency-decomposed rep-
+resentations instead of pixel-space inputs. Specifically, we introduce DeBaT,
+a Decoupled Band Tokenizer that explicitly separates low- and high-frequency
+components of the input image and learns dedicated latent embeddings for each
+
+=== PDF PAGE 8 ===
+8      T. Medi et al.
+
+
+band. Given an input image  \     mathbf{X}, we apply a discrete wavelet transform
+        \mathcal{W}(\cdot)using the Haar filter to obtain its low and high-frequency representations.
+W(x) =  xL, xH  , where            \mathbf{x}_Land          \mathbf{x}_Hdenote the low- and high-frequency com-
+ponents, respectively. We adopt the normalization strategy proposed in [35] to
+normalize both components prior to encoding.
+   To model low and high frequency specific information, we employ two in-
+dependent encoder-decoder pairs, (E_ L,     D_L)and (E_ H,  ,D_H) each responsible for
+learning latent embeddings (zL, zH) corresponding to the low- and high-frequency
+inputs. This allows to capture the full frequency spectrum more effectively than
+standard VAEs, where low and high spatial frequencies are optimized jointly. To
+ensure a fair comparison with baseline VAEs, we allocate the latent dimensions
+of the low and high frequencies such that the concatenated latent vector has the
+same dimensionality as that of the standard baseline VAE, i.e. 16 × 16 × 32 (see
+Figure 2),
+               \ mathbf  {z } _L =     E_L(\mathbf\quad\mathbfE_H(\mathbf
+
+where zL and zH represents the low and high frequency latent embeddings.
+
+Low Frequency Objective. To learn latent embeddings that capture the
+global structural information of images, we optimize the low-frequency compo-
+nent using the VAVAE training objective [56]. VAVAE has demonstrated strong
+performance among latent tokenizers; it improves reconstruction fidelity through
+alignment with vision foundation models and enhanced perceptual supervision.
+   In our framework, the low-frequency representation             \mathbf{x}_Lobtained from the
+wavelet decomposition is encoded into a latent embedding            \mathbf{z}_L, which is recon-
+structed through the decoder while being optimized under a combination of
+complementary objectives. Specifically, the training objective consists of the
+standard VAE reconstruction loss  \mathcaland KL regularization  \mathcal, together
+with additional supervision terms introduced in VAVAE [56], including a vision
+foundation alignment loss  \mathcal, an adversarial regularization objective  \mathcalin-
+spired by VQGAN [1], and a perceptual similarity loss  \mathcal[63]. The complete
+low-frequency objective is given by LL.
+
+       \ mathc a l  {L} ^ {L}  = \ m athc al {L } _{\tex t{rec}}^{L}\mathcal\lambda\mathcal\lambda\mathcal\lambda\mathcal
+
+where,
+
+                                   {                                              {L}\mathbb{E}_{q(\mathbf\mid\mathbf\mathbfD_L(\mathbf\right\right\mathcalD_{\mathrm(q(\mathbf\mid\mathbf{x}_L)\,\|\,p(\mathbf{z}_L)\right                              \ma t hcal {L}_ \te x t {rec}}^  ,
+
+
+where  \mathcalis the low-frequency reconstruction loss,  \mathcalis the KL divergence
+between the encoder’s approximate posterior  q(\ m athbf{x}_L)and the Gaussian prior
+ p(\m a thbf     {z}_L).={N}(\mathbf{0},{I}) The vision foundation loss  \mathcalaligns the latent codes with
+the feature space of a pretrained foundation model (DINOv2 [37]). The adversar-
+ial loss  \mathcalintroduces a discriminator to distinguish real from reconstructed
+low-frequency inputs. Finally, the perceptual loss  \mathcalencourages perceptual
+
+=== PDF PAGE 9 ===
+                                                 DeBaT      9
+
+
+similarity between input and reconstruction using features from a pretrained In-
+ception network [46]. All these loss components are commonly used in modern
+VAE frameworks. This overall objective encourages the latent representation to
+preserve global structure through reconstruction and KL regularization, while
+perceptual and adversarial supervision with vision foundation alignment loss
+improve visual fidelity and semantic alignment of the reconstructed images.
+
+High-Frequency Objective. In contrast to low frequency optimization, high
+frequency representations are optimized without any supervision from pretrained
+models, as these pretrained models tend to be trained jointly with low-and high
+spatial frequencies. To mitigate any external biases, we simplify our training
+objective focusing on reconstruction objective along with KL and adversarial
+regularization. The overall high-frequency objective is given by LH.
+
+               \ mathc a l {L}^ { H}&=
+                   \mathc
+               al{L } _{\text{rec}}^H{L}_{\text{KL}}^H{L}_{\text{GAN}}^H,{L}_{\text{rec}}^H{z}_H|\mathbf{x}_H)}{x}_HD_H(\mathbf{z}_H){L}_{\text{KL}}^H{KL}}\left{z}_H{x}_H){z}_H)\right )
+
+
+
+ \     mathcalis the high-frequency reconstruction loss, \mathcalis the KL divergence between
+the encoder’s approximate posterior q(\ m athbf{x}_H)and the Gaussian prior  p(\m a
+thbf     {z}_H).={N}(\mathbf{0},{I})
+
+Inference. At inference time, both decoders (DL, DH) are used to reconstruct
+the respective frequency bands, and the final image is synthesized via inverse
+wavelet transform:
+
+            \ h at {\ma   thb f  {x}}_L  =   D_L(\mat hbf            {z}_L),\quad{\mathbfD_H(\mathbf\quad{\mathbf\mathcal{\mathbf{\mathbf
+
+This frequency-aware latent representation learning via DeBaT yields expressive
+latent embeddings by preserving both coarse structure and fine details across the
+full spectrum of spatial frequencies.
+
+
+3.3  Latent Fusion for Generative Modeling
+
+To enable frequency-aware generation, we integrate the proposed DeBaT tok-
+enizer into the latent diffusion framework LightningDiT [56]. Given an input
+image   ,{x} wavelet decomposition produces low- and high-frequency components
+ (\m athbf,{x}_H) which are encoded into frequency-specific latent embeddings.
+
+               \ mathbf    {z } _L =     E_L(\mathbf\qquad\mathbfE_H(\mathbf
+
+                                                                                                                                        {z}_H{R}^{HC_H}encodeswhere  \ m athb f                                                 {z}_L{R}^{HC_L}captures global structure and \ m athb f
+fine details. The two embeddings are fused through channel-wise concatenation
+yielding a unified latent representation \ t ilde  {\mathbf{R}^{H(C_L+C_H)}. The diffusion model
+then learns the latent distribution    p_\theta(\tilde{z}}). During generation, the sampled latent
+\tilde{z}}is separated into respective low and high frequency embeddings.
+
+                  \ h at {\ma      thb f {z}}_L =   \tilde{\mathbf{z}}_{1:C_L},\qquad{\mathbf{\mathbf{z}}_{C_L+1:C_L+C_H},
+
+=== PDF PAGE 10 ===
+10     T. Medi et al.
+
+   which are decoded independently ˆxL = DL(ˆzL), and ˆxH = DH(ˆzH), and the
+image is reconstructed via inverse wavelet transform ˆx = W−1(ˆxL, ˆxH). This
+enables the diffusion model to operate on a frequency-aware latent space while
+preserving modularity with existing latent generative pipelines.
+
+
+4  Experiments
+
+To evaluate DeBaT, we first access the reconstruction performance of visual
+tokenizers in both spatial and spectral domains. Then, we integrate the latent
+embeddings into standard image sythesis pipeline, comparing DeBaT combined
+with LightningDiT [56] to competing models. All experiments are conducted
+on ImageNet-1K [8] and use 50k ImageNet validation samples for evaluation.
+Further architectural and implementation details of DeBaT are provided in Ap-
+pendix section A & section B.
+
+
+4.1  Performance Evaluation of Latent Tokenizers
+
+To evaluate the reconstruction performance of latent embeddings in both the
+spatial and spectral (frequency) domains, we consider visual tokenizers com-
+monly used in modern latent generative models. These tokenizers are different
+variants of variational autoencoding architectures, each aiming to learn com-
+pact and informative latent embedding representations, which depict the un-
+derlying input data distribution. For comprehensive analysis, we include recent
+discrete [1,48,58] and continuous latent tokenizers [7,27,28,42,56,58]. We com-
+pare these latent tokenizers with DeBaT. This enables comparison across various
+latent tokenizers with varying latent dimensionalities and feature resolutions as
+shown in Table 1. We use the metrics discussed in subsection 3.1 for evaluation.
+   Our analysis in  Table 1 reveals that KL-regularized VAE from [28] with
+right parameterizations consistently outperform both traditional VAE and vec-
+tor quantization (VQ-VAE) baselines across all reconstruction metrics. Also
+KL-regularized VAE show efficient reconstruction performance at much better
+compression rate with lower dimensionality. This improvement stems from the
+absence of quantization artifacts, which often degrade reconstruction quality
+in discrete latent spaces. Additionally, the effectiveness of KL-VAE is closely
+tied to the quality of their latent parameterization schemes. Notably, KL-VAE
+employed in recent autoregressive models [6]. VA-VAE [56] further aligns its
+latent space using KL-VAE parameterization with foundation models like DI-
+NOv2 [37] achieving strong performance across low and high-frequency recon-
+struction, along with improved perceptual quality. However, these models still
+rely on a joint optimization of spatial frequencies, which can lead to trade-offs
+and suboptimal detail preservation, especially in the high-frequency spectrum.
+In contrast, our proposed approach DeBaT builds on the VA-VAE framework
+by explicitly decoupling and modeling low- and high-frequency components in
+learning of the compact and frequency preserving expressive latent embeddings.
+This separation enables focused representation learning for each frequency band,
+
+=== PDF PAGE 11 ===
+                                                 DeBaT     11
+
+
+
+   Visual Tokenizer    Tokenizer Latent    Rec.    LF    HF    LPIPS   rFID
+
+   DC-AE [7]           8x8x32               0.0194    0.0484    0.0097    0.1580    0.7450
+   DC-AE [7]           4x4x128              0.0207    0.0527    0.0100    0.1667    0.7623
+   DC-AE [7]          4×4×512             0.0225    0.0581    0.0106    0.1805    0.7912
+   SD-VAE [42]         16x16x16             0.0180    0.0422    0.0100    0.1743    0.6213
+   KL-VAE [28]         16x16x16             0.0148    0.0326    0.0089    0.1355    0.5318
+   MS-VQ-VAE [48]     16x16x32 (4096)      0.0195    0.0549    0.0076    0.1890    0.6981
+   RQ-VAE [27]         8x8x16 (16384)       0.0416    0.1219    0.0149    0.2712    0.9095
+   TiTok-VQ-VAE [58]   128x64 (8192)         0.0226    0.0561    0.0114    0.2082    0.7550
+   TiTok-VQ-VAE [58]   64x64 (8192)          0.0339    0.0947    0.0137    0.2657    0.8823
+   TiTok-VQ-VAE [58]   32x64 (8192)          0.0450    0.1344    0.0152    0.2949    0.9416
+   TiTok-VAE [58]       256x16               0.0332    0.0923    0.0134    0.2232    0.8640
+   TiTok-VAE [58]       128x16               0.0461    0.1380    0.0155    0.2682    0.9187
+   TiTok-VAE [58]       64x16                0.0617    0.1961    0.0170    0.3182    0.9761
+   VQ-VAE [1]          16x16x256 (1024)     0.0492    0.1478    0.0163    0.3064    0.9102
+   VQ-VAE [1]          16x16x256 (16384)    0.0438    0.1262    0.0164    0.2784    0.8826
+
+   LiteVAE [43]         32x32x12             0.0086    0.0179    0.0050    0.0970    0.2250
+   VA-VAE [56]         16x16x32             0.0105    0.0200    0.0074    0.0975    0.2777
+   DeBaT (Ours)     16x16x32          0.0044   0.0114   0.0020   0.0940   0.2156
+
+Table 1: Quantitative comparison of various latent tokenizers based on their recon-
+struction quality across multiple metrics. Tokenizer latent represents latent dimension-
+ality (height × width × channel), in case of quantized latents latent dimensionality is
+represented by (height × width × channel (codebook size)). For TikTok versions as
+the latent space is 1-D, latent dimension represents (number of tokens × channels).
+Metrics: Rec. (reconstruction loss), LF (low-frequency loss), HF (high-frequency loss),
+LPIPS and rFID. Lower is better. DeBaT achieves a substantial improvement over
+previous methods in terms of reconstruction quality.
+
+
+   Input    VA-VAE   Lite-VAE     Ours    VA-VAE   Lite-VAE     Ours
+
+
+
+
+
+Recon. Error:    0.0044        0.0028        0.0018     Error Map   Error Map   Error Map
+
+
+
+
+
+Recon. Error:    0.0040        0.0023        0.0018     Error Map   Error Map   Error Map
+
+
+
+
+
+Recon. Error:    0.0025       0.0015       0.0012     Error Map   Error Map   Error Map
+
+Fig. 4: Comparison with respect to reconstructions and error maps with best baseline
+VA-VAE and the previous wavelet base method LiteVAE. DeBaT Error Maps have
+consistently lower magnitudes than VA-VAE and LiteVAE Error Maps, visible as fine
+details that are correctly reconstructed in particular in structured regions like person
+faces, the texture of the dress or the printed text. LiteVAE performs better than VA-
+VAE but makes more errors in fine details than DeBaT.
+
+=== PDF PAGE 12 ===
+12     T. Medi et al.
+
+
+
+                                              Generation w/o CFG         Generation w/ CFG
+ Method        Tokenizer Epochs #Params
+                                     gFID sFID   IS   Pre. Rec. gFID sFID   IS   Pre. Rec.
+
+                                                Autoregressive (AR)
+ MaskGIT [5]     VQ-VAE    555    227M     6.18      -    182.1  0.80  0.51      -        -        -        -       -
+ LlamaGen [45]    VQ-VAE    300     3.1B     9.38   8.24  112.9  0.69  0.67   2.18   5.97  263.3  0.81  0.58
+ VAR [48]      MS-VQ-VAE  350     2.0B         -        -        -        -       -     1.80      -    365.4  0.83  0.57
+ MagViT-v2 [57]   VQ-VAE    1080   307M     3.65      -    200.5     -       -     1.78      -    319.4     -       -
+ MAR [28]       KL-VAE    800    945M     2.35      -    227.8  0.79  0.62   1.55      -    303.7  0.81  0.62
+
+                                             Latent Diffusion Models
+ MaskDiT [65]     SD-VAE    1600   675M     5.69  10.34  177.9  0.74  0.60   2.28   5.67  276.6  0.80  0.61
+ DiT [38]        SD-VAE    1400   675M     9.62   6.85  121.5  0.67  0.67   2.27   4.60  278.2  0.83  0.57
+ SiT [31]         SD-VAE    1400   675M     8.61   6.32  131.7  0.68  0.67   2.06   4.50  270.3  0.82  0.59
+ FasterDiT [55]    SD-VAE    400    675M     7.91   5.45  131.3  0.67  0.69   2.03   4.63  264.0  0.81  0.60
+ MDT [11]       SD-VAE    1300   675M     6.23   5.23  143.0  0.71  0.65   1.79   4.57  283.0  0.81  0.61
+ MDTv2 [12]      SD-VAE    1080   675M         -        -        -        -       -     1.58   4.52  314.7  0.79  0.65
+ REPA [59]       SD-VAE    800    675M     5.90      -        -        -       -     1.42   4.70  305.7  0.80  0.65
+
+ LightningDiT [56] Lite-VAE     64    675M     7.97   5.13  128.1  0.70  0.64   2.27   4.50  260.0  0.80  0.57
+ LightningDiT [56]  VA-VAE     64    675M     5.14   4.22  130.2  0.76  0.62   2.11   4.16  252.3  0.81  0.58
+ LightningDiT [56]  DeBaT     64    675M    3.24  4.09  193.7 0.83  0.69  1.52  4.07  317.4 0.83  0.65
+
+Table 2: Comparision of generation performance of autoregressive and latent diffusion
+models with and without classifier-free guidance (CFG) vs. LightningDiT with our
+DeBaT tokenizer. Missing values are indicated by -. We report metrics available in
+the respective works. DeBaT provides consistent improvement over previous works, in
+particular over VA-VAE where the direct comparison in terms of generation method
+(LightningDiT), epochs and number of parameters is straight-forward.
+
+
+
+
+leading to more precise reconstructions of both global structures and fine details.
+For additional quantitative evaluation results, please refer to Table 1 and Table 2
+in the Appendix section C. Figure 4 shows visual comparison with best baselines
+VAVAE, LiteVAE and our approach with reconstruction errors and error maps,
+where our reconstructions are much detailed with lower reconstruction error and
+lower magnitude in error maps overall, showcasing preservation of high frequency
+details. In comparison to previous work leveraging wavelet transforms [43], we
+observe that DeBaT achieves a substantially lower reconstruction loss, particu-
+larly prominent in the high frequency loss. Notably, LiteVAE employs wavelets
+to facilitate highly compressed latent codes, not fully leveraging their ability to
+decouple frequency bands as proposed in DeBaT.
+
+
+
+4.2  Latent Generation Results
+
+
+We evaluate the generative quality of our learned latent embeddings by train-
+ing a diffusion-based generative model on top of the DeBaT latent representa-
+tions. Specifically, we use LightningDiT [56], a fast-converging latent diffusion
+backbone to model the generation process, and compare against a wide range
+of state-of-the-art autoregressive and latent diffusion models, both with and
+without classifier-free guidance (CFG). Table 2 reports results across standard
+metrics: generation FID score (gFID), spatial FID (sFID), Inception Score (IS),
+Precision, and Recall. Lower gFID and sFID values indicate better image fidelity
+and diversity, while higher IS, precision, and recall reflect better sample quality.
+sFID is equivalent to FID but uses intermediate spatial features in the inception
+network rather than the spatially-pooled features in standard FID.
+
+=== PDF PAGE 13 ===
+                                                 DeBaT     13
+
+
+
+
+
+Fig. 5: Class-conditional generation results of classes : Dog (class id : 207), mushroom
+(class id : 947), Daisy (class id : 985), duck( class id : 97) of LightningDiT with DeBaT.
+
+
+
+   Table 2 shows comparison of LightningDiT with DeBaT with other standard
+latent generation baselines. Our approach, LightningDiT with DeBaT, achieves
+the best gFID among all diffusion based generation methods, along with highly
+competitive sFID and strong scores across IS, precision, and recall with and
+without the CFG setting. Compared to auto-regressive models like MaskGIT [5],
+MAR [28], VAR [48], MagViT-v2 [57] and LlamaGen [45], as well as latent diffu-
+sion models such as MaskDiT [65], DiT [38], SiT [31], FasterDiT [55], MDF [11]
+and REPA [59], our method consistently delivers a better fidelity and diversity.
+Notably, it outperforms the LightningDiT baseline trained on VA-VAE embed-
+dings across all metrics, demonstrating the advantage of our frequency-aware
+latent space in enhancing generation quality. These results validate the effective-
+ness of our DeBaT tokenizer for learning high-quality, detail-preserving represen-
+tations that generalize well in generative pipelines. The qualitative results of our
+generated visualizations are shown in Figure 5. Figure shows the conditional gen-
+eration samples of our approach when integrated with LightningDiT, showcasing
+diversity and quality in generated samples. Further quantitative evaluations with
+longer generative training are provided in Appendix subsection C.3.
+
+
+5  Ablation Study
+
+Ablation on Frequency Decoupling. To further investigate the contribu-
+tion of decoupling low- and high-frequency components in our frequency-aware
+
+=== PDF PAGE 14 ===
+14     T. Medi et al.
+
+
+         Tokenizer   Rec.↓  LF↓   HF↓  PSNR↑SSIM↑LPIPS↓ rFID↓
+
+        KL-VAE      0.1146  0.0645  0.1313   25.07     0.74    0.2151   0.7820
+        MS-VQ-VAE  0.0238  0.0705  0.0082   21.70     0.65    0.2331   0.8427
+        VA-VAE      0.0125  0.0263  0.0098   26.01     0.78    0.1071   0.6509
+       DeBaT     0.0044 0.0114 0.0020  30.03    0.90   0.0940  0.4156
+
+Table 3: Reconstruction comparison of tokenizers using wavelet representations in-
+stead of pixel inputs. Metrics include reconstruction loss (Rec.), low-frequency loss
+(LF), high-frequency loss (HF), PSNR, SSIM, LPIPS, and rFID. Lower is better for
+Rec., LF, HF, LPIPS, and rFID, while higher is better for PSNR and SSIM.
+
+
+training strategy, we conduct an ablation study utilizing standard KL-VAE [28],
+multi-scale VQ-VAE [48] and VAVAE [56] with coupled low and high frequency
+representation as input after wavelet transformation.
+    Specifically, we retrain these models by coupling the low- and high-frequency
+components in a shared frequency space, using the same wavelet-based losses
+employed in our DeBaT framework. In this setup, each tokenizer is optimized
+jointly on both low- and high-frequency representations obtained via the Discrete
+Wavelet Transform (DWT) using Haar wavelet filter.
+   The results, presented in Table 3, demonstrate that our frequency-aware
+DeBaT with decoupling frequency representations as input consistently outper-
+forms the coupled-frequency variants across all metrics, including overall recon-
+struction error (Rec.), low-frequency (LF) and high-frequency (HF) fidelity error,
+perceptual similarity loss (LPIPS), and reconstruction FID (rFID) with higher
+PSNR and SSIM. This indicates that explicitly decoupling frequencies during
+training leads to more accurate and perceptually faithful reconstructions. For a
+fair comparison, all models are trained with similar combined latent dimension-
+ality as used in the DeBaT configuration. Additional ablations with varying low
+and high frequency channels are provided in Appendix susection C.4.
+
+High-resolution  evaluation. We
+further evaluate DeBaT on FFHQ at   Tokenizer PSNR↑gFID↓Pre.↑Rec.↑
+10242 resolution using LightningDiT.  VA-VAE     33.84    6.92    0.69   0.31
+As shown  in Table  4, DeBaT con-  DeBaT     34.27   6.86   0.71  0.31
+sistently improves both reconstruction  Table 4: High-resolution evaluation on FFHQ
+quality (PSNR) and generation qual-   (10242)  using LightningDiT. DeBaT  achieves
+                                                  better reconstruction and generation quality than
+ity (gFID and precision) over VA-VAE  VA-VAE demonstrating the scalability to high-
+while maintaining the same latent rep-   resolution generation.
+resentation (32×32×64), demonstrat-
+ing the scalability of the proposed tokenizer to high-resolution generation.
+
+Training complexity and efficiency. Table 5 compares DeBaT with represen-
+tative tokenizers in terms of reconstruction quality, architectural complexity, and
+runtime efficiency. Under the same latent size (16×16×32) as VA-VAE, DeBaT
+achieves substantially better reconstruction quality (30.03 dB PSNR vs. 26.26
+dB) while maintaining comparable GPU memory consumption (5892 MB vs.
+5694 MB) and practical inference speed (50.08 img/s, 19.97 ms/img). Although
+DeBaT employs more parameters due to its dual encoder–decoder architecture,
+it remains more efficient than the considerably larger WF-VAE, achieving both
+
+=== PDF PAGE 15 ===
+                                                 DeBaT     15
+
+
+          Tokenizer PSNR↑# Params↓Memory↓Throughput↑Latency↓
+                              (M)      (MB)       (img/s)     (ms/img)
+
+        SD-VAE     24.91      83.65       8040         31.78        31.47
+        VA-VAE     26.26      72.60      5694       57.83       17.29
+          LiteVAE     28.59     59.96       6922         45.96        21.76
+        WF-VAE     29.00      317.08       9571         27.48        36.39
+       DeBaT     30.03     137.91       5892         50.08        19.97
+
+Table 5: Training complexity and efficiency comparison. Throughput, latency, and
+GPU memory are measured at batch  size 32 and 256 × 256 resolution. Higher
+PSNR/throughput and lower parameters, memory, and latency are preferred.
+
+
+higher PSNR and faster inference. These results demonstrate that the proposed
+frequency-decoupled design provides a favorable trade-off between reconstruc-
+tion quality and computational efficiency.
+
+6  Conclusion
+
+In this work, we investigate frequency awareness in the latent embeddings of
+tokenizer models used within latent generative pipelines. We find that jointly
+optimizing low- and high-frequency components leads to a frequency bias favor-
+ing low-frequencies thereby degrading the reconstruction of fine-grained, high-
+frequency details and overall perceptual quality. To address this limitation,
+we introduce DeBaT, a simple yet effective VAE framework that explicitly
+decouples low and high-frequency bands via wavelet decomposition, processes
+them independently, and fuses them into a unified latent representation. De-
+BaT achieves state-of-the-art performance across frequency-aware reconstruc-
+tion metrics, demonstrating improved fidelity and perceptual quality. When used
+within a diffusion-based generation framework, our approach preserves the spec-
+tral richness of the data, enabling more accurate, high fidelity generation of
+images with coarse structures as well as fine details.
+Discussion & Future Direction.  After training, DeBaT’s latent code is
+composed of separate codes for high and low frequencies. A potential future
+direction is to explore the combination of the learned latent codes with other,
+complementary latent encoders, where we would hope to improve fine details
+in generated data without full training. Furthermore, it would be interesting
+to explore DeBaT’s use in conjuction with different tokenizer architectures. In
+this work, we focused on VAVAE as a baseline model because it recently pro-
+vided state-of-the-art performance while being computationally efficient. Last,
+it would be interesting to extend DeBaT to more wavelet decomposition stages.
+Our current model only leverages a single wavelet decomposition stage which
+provides only limited efficiency gains. Multi-Stage decompositions similar to the
+setting recently proposed in WF-VAE [29] could be combined with DeBaT, to
+facilitate fully decoupled multi-stage encoding, potentially with further benefits
+in efficiency as well as in detail preservation.
+Acknowledgments. The authors acknowledge support by the state of Baden-
+Württemberg through bwHPC and the German Research Foundation (DFG)
+through grant INST 35/1597-1 FUGG.
+
+=== PDF PAGE 16 ===
+    Decoupling High and Low Frequencies for
+   Faithful Image Generation with Fine Details
+                 Appendix
+
+
+     Tejaswini Medi1   , Hsien-Yi Wang1, Arianna Rampini2, and Margret
+                                Keuper1,3
+
+                           1 University of Mannheim, Germany
+                                     2 Autodesk AI Lab
+     3 MPI for Informatics, Saarland Informatics Campus, Saarbrücken, Germany
+                 {tejaswini.medi,keuper}@uni-mannheim.de
+
+In this appendix, we provide additional details supporting the main paper. The
+following sections elaborate on architectural components of our approach De-
+BaT, implementation specifics, additional evaluations, qualitative visualizations
+and auxiliary analysis that complement our primary findings.
+   The overview of appendix is provided below:
+
+ – Section A: Architectural details of the proposed DeBaT.
+ – Section B: Implementation details of DeBaT.
+ – Section C: Additional quantitative evaluations comparing DeBaT.
+ – Section D:  Qualitative comparisons with DeBaT, including error maps,
+    residual power spectra, and low/high-frequency reconstructions demonstrat-
+    ing the efficacy of DeBaT.
+
+
+A  Architectural Details of DeBaT
+
+The proposed Decoupled Band Tokenizer (DeBaT) separates the learn-
+ing of low- and high-frequency components in latent tokenizers. Specifically, we
+first apply a single-level Haar wavelet decomposition to the input data, which de-
+composes it into low-frequency (LF) and high-frequency (HF) components. Each
+frequency band is then processed by an independent encoder–decoder pair fol-
+lowing a U-Net-based architecture inspired by latent visual tokenizers [1,56]. The
+low-frequency band focuses on capturing global structural information, while the
+high-frequency band models fine textures and rapidly varying details. By decou-
+pling the learning process and assigning a dedicated encoder–decoder pair to
+each frequency band, DeBaT learns disentangled latent representations for low-
+and high-frequency components. This design enables the model to better exploit
+the spectral characteristics of each band and improves the representation of both
+global structure and fine details. After encoding, the latent vectors from the LF
+and HF are concatenated to form a unified latent representation. This fused la-
+tent code is subsequently used by the downstream generative model based on
+LightningDiT [56], enabling frequency-aware image generation.
+   In this section, we provide pseudocode for the main modules of DeBaT. As
+illustrated in Figure 1, DeBaT employs a wavelet-based splitting mechanism
+
+=== PDF PAGE 17 ===
+                                                 DeBaT     17
+
+
+
+
+
+class WaveletSplit (nn.Module):
+     def __init__(self , mode="haar"):
+         super ().__init__ ()
+          # 1-level Haar wavelet transform
+        self.dwt = DWTForward(J=1, wave=mode , mode="zero")
+
+     def forward(self , x):
+          # x: input image (B, 3, H, W)
+         x_low , x_high_list = self.dwt(x)    # low and high frequency parts
+         x_high = x_high_list [0]               # LH , HL , HH subbands
+
+          # Normalize low / high frequencies
+         x_low   = x_low   / 2.0
+         x_high = x_high / 2.0
+
+          # Pack three high -frequency subbands into a 9-channel tensor
+          B = x_high.shape [0]
+         x_high = x_high.reshape(B, 9, x_high.shape [-2], x_high.shape [ -1])
+
+         return x_low , x_high
+
+
+
+class WaveletMerge (nn.Module):
+     def __init__(self , mode="haar"):
+         super ().__init__ ()
+          # Inverse Haar wavelet transform
+        self.idwt = DWTInverse(wave=mode , mode="zero")
+
+     def forward(self , x_low , x_high):
+          # x_low:  low -frequency tensor   (B, 3, H/2, W/2)
+          # x_high: high -frequency tensor  (B, 9, H/2, W/2)
+
+          # Unpack 9-channel tensor back into three subbands
+         B, _, H, W = x_high.shape
+         x_high = x_high.reshape(B, 3, 3, H, W)
+         x_high = [x_high [:, i] for i in range (3)]   # list: [LH , HL , HH]
+
+          # Undo normalization
+         x_low   = x_low   * 2.0
+         x_high = [h * 2.0 for h in x_high]
+
+          # Reconstruct full -resolution image
+         x_recon = self.idwt ((x_low , x_high))
+         return x_recon
+
+
+     Fig. 1: Wavelet decomposition and reconstruction modules used in DeBaT.
+
+
+
+that decomposes the input into low-frequency (LF) and high-frequency (HF)
+bands, which are later used for reconstruction. The corresponding latent extrac-
+tion and fusion pipeline is shown in Figure 2. Finally, Figure 3 presents the
+complete DeBaT pseudo-architecture. The encoder and decoder blocks follow
+the VAVAE-style encoder–decoder design and are implemented as standard U-
+Net-based VAEs [56]. The channel dimensions for the LF and HF branches are
+configured according to the single wavelet decomposition, which is 16.
+
+
+B  Implementation Details
+
+We follow a similar hyperparameter configuration to prior works [42, 56] for
+implementing our latent reconstruction and generative modeling pipeline. The
+visual tokenizer training setup is based on the Latent Diffusion Model (LDM)
+framework [28, 42]. Specifically, we adopt a VQGAN-style encoder–decoder ar-
+chitecture but remove the vector quantization stage, allowing the model to learn
+a continuous latent representation regularized with a KL divergence term. The
+KL loss is applied directly to the latent distribution following [56]. To sup-
+port distributed training across multiple nodes, we scale the learning rate and
+
+=== PDF PAGE 18 ===
+18     T. Medi et al.
+
+
+
+
+
+# DeBaT: Low - and High -Frequency Latent Extraction
+class DeBaT(nn.Module):
+     def encode(self , x):
+         z_L = self.encoder_L(x)      # low -frequency (global structure)
+         z_H = self.encoder_H(x)      # high -frequency (fine details)
+         return z_L , z_H
+
+# Fusion Module: z_tilde = F(z_L , z_H)
+class LatentFusion (nn.Module):
+     def forward(self , z_L , z_H):
+         return torch.cat ([z_L , z_H], dim =1)
+
+# Integration with LightningDiT for frequency -aware generation
+class LightningDiT (nn.Module):
+     def __init__(self , DeBaT , dit):
+         super ().__init__ ()
+        self.DeBaT , self.fusion , self.dit = DeBaT , LatentFusion (), dit
+
+     def forward(self , x, t, cond=None):
+         z_L , z_H   = self.DeBaT.encode(x)   # 1) Encode
+         z_tilde    = self.fusion(z_L , z_H)   # 2) Fuse
+         return self.dit(z_tilde , t, cond)   # 3) Diffusion generation
+
+
+Fig. 2: Latent extraction and fusion in DeBaT for frequency-aware generation. The
+DeBaT encoders independently map low-frequency (z_ L) and high-frequency (z_ H) com-
+ponents into disentangled latent representations. The LatentFusion module concate-
+nates the two latent vectors to obtain a unified latent code   \protect{z}, which is then passed to
+a diffusion transformer (LightningDiT) for frequency-aware generative modeling.
+
+
+global batch size to 1 × 10−4 and 256, respectively, following the MAR training
+setup [28]. For the proposed DeBaT tokenizer, we train two separate f16 tok-
+enizers corresponding to the low-frequency and high-frequency bands obtained
+through wavelet decomposition, where "f" represents the latent spatial compres-
+sion rate. The low-frequency tokenizer is trained using the Visual Foundation
+(VF) alignment loss introduced in VAVAE [56], which leverages features from
+DINOv2 [37]. The VF loss hyperparameters are set to m1 = 0.5, m2 = 0.25,
+and whyper = 0.1, following the configuration used in VAVAE [56]. For gener-
+ative modeling, we employ LightningDiT [56], incorporating the architectural
+improvements and training strategies described in their work. The latent repre-
+sentations extracted by DeBaT on ImageNet at a resolution of 256×256 are used
+to train LightningDiT for 64 epochs. The patch size is set to 1, ensuring that the
+effective downsampling factor of the overall system remains 16, consistent with
+the design choice [7, 56]. All experiments are conducted using 4 NVIDIA H100
+GPUs with 93.6GB VRAM each.
+
+Evaluation Metrics. We report several standard metrics commonly used to
+evaluate the quality of generated images from autoregressive and latent diffusion
+models.
+
+
+ – gFID (generation FID): Frechet Inception Distance computed between gen-
+    erated images and real images, using the Inception-v3 network. Lower values
+    indicate better alignment in feature distributions and overall visual fidelity.
+ – sFID (spatial FID): A spatial-aware variant of FID. sFID is equivalent to
+   FID but uses intermediate spatial features in the inception network rather
+   than the spatially-pooled features used in standard FID.
+
+=== PDF PAGE 19 ===
+                                                 DeBaT     19
+
+
+
+
+
+class DeBaT(nn.Module):
+     def __init__(self , encoder_config_L ,                       def encode_high(self , x_high):
+           encoder_config_H ,                                         h_H = self.encoder_H(x_high)
+                  decoder_config_L , decoder_config_H ,             moments = self. quant_conv_H (h_H)
+                  embed_dim_L , embed_dim_H):                       return DiagonalGaussianDistribution (moments)
+         super ().__init__ ()
+                                                                         # HF decoders
+          # Wavelet decomposition                                 def decode_low(self , z_L):
+         self. wavelet_split = WaveletSplit (mode="haar",            z_L = self. post_quant_conv_L (z_L)
+                levels =1)                                           return self.decoder_L(z_L)
+         self. wavelet_merge = WaveletMerge (mode="haar")
+                                                                  def decode_high(self , z_H):
+          # LF encoder/decoder                                        z_H = self. post_quant_conv_H (z_H)
+        self.encoder_L = Encoder (** encoder_config_L )              return self.decoder_H(z_H)
+        self.decoder_L = Decoder (** decoder_config_L )
+                                                                         # forward
+          # HF encoder/decoder                                    def forward(self , x):
+        self.encoder_H = Encoder (** encoder_config_H )              x_low , x_high = self. wavelet_split (x)
+        self.decoder_H = Decoder (** decoder_config_H )
+                                                                       q_L = self.encode_low(x_low)
+          # Gaussian posterior parameters                            q_H = self. encode_high(x_high)
+         self. quant_conv_L = nn.Conv2d(
+               2 * encoder_config_L ["z_channels"],                   z_L = q_L.sample ()
+               2 * embed_dim_L , 1)                                     z_H = q_H.sample ()
+
+         self. quant_conv_H = nn.Conv2d(                            x_low_rec   = self.decode_low(z_L)
+               2 * encoder_config_H ["z_channels"],                  x_high_rec = self.decode_high (z_H)
+               2 * embed_dim_H , 1)
+                                                                     x_rec = self. wavelet_merge (x_low_rec ,
+          # Map latent vectors to decoder channels                        x_high_rec)
+         self. post_quant_conv_L = nn.Conv2d(
+             embed_dim_L , decoder_config_L ["z_channels"           return {
+                    ], 1)                                               "x_rec": x_rec ,
+                                                                      "x_low_rec": x_low_rec ,
+         self. post_quant_conv_H = nn.Conv2d(                          "x_high_rec": x_high_rec ,
+             embed_dim_H , decoder_config_H ["z_channels"               "posterior_L ": q_L ,
+                    ], 1)                                              "posterior_H ": q_H
+                                                                              }
+     # LF encoder
+     def encode_low(self , x_low):
+         h_L = self.encoder_L(x_low)
+         moments = self. quant_conv_L (h_L)
+         return DiagonalGaussianDistribution (moments)
+
+
+Fig. 3: DeBaT pseudo  architecture with  separate  low- and  high-frequency  en-
+coder–decoder branches.
+
+
+
+ – IS (Inception Score): Measures both the confidence and diversity of gener-
+    ated images based on class predictions from the Inception network. Higher
+    IS indicates better generative diversity and visual sharpness.
+ – Pre. (Precision) and Rec. (Recall): These metrics assess the coverage
+   and fidelity of the generated data manifold with respect to real images.
+   Higher precision implies fewer unrealistic samples, while higher recall indi-
+    cates better diversity and coverage.
+
+   All metrics are computed using 50K generated samples. We report results
+both with and without Classifier-Free Guidance (CFG) when available,
+which is a commonly used sampling technique in diffusion models to improve
+sample quality. Missing entries (marked as -) reflect the unavailability of results
+in the respective original papers.
+
+
+C  Additional Quantitative Evaluation
+
+In this section, we provide additional quantitative evaluations to further demon-
+strate the effectiveness of DeBaT compared to baseline latent tokenizers. We
+evaluate reconstruction quality using both pixel-level and perceptual metrics.
+All evaluations are performed on the ImageNet validation set, which consists of
+50,000 images. We first analyze the reconstruction fidelity of different visual tok-
+enizers using standard image reconstruction metrics such as PSNR and SSIM. We
+
+=== PDF PAGE 20 ===
+20     T. Medi et al.
+
+
+then evaluate the pixel-level and frequency-aware reconstruction performance of
+the tokenizers using perceptual similarity metrics and frequency-specific losses
+for models trained on large-scale datasets. These experiments highlight the ad-
+vantages of decoupled frequency modeling in DeBaT.
+
+
+C.1  Reconstruction Quality: PSNR and SSIM
+
+We evaluate the reconstruction quality of different visual tokenizers using the
+standard image reconstruction metrics, Peak Signal-to-Noise Ratio (PSNR) and
+Structural Similarity Index (SSIM). These metrics measure pixel-level recon-
+struction fidelity and structural consistency between the original and recon-
+structed images.
+   Table 1 reports PSNR and SSIM scores for various latent tokenizer models.
+The results show that DeBaT achieves higher PSNR and SSIM compared to
+other latent tokenizers, leading to improved reconstruction fidelity. These re-
+sults highlight the benefit of decoupling low-frequency structural information
+from high-frequency details during encoding and decoding. We additionally in-
+clude WF-VAE [29], a wavelet-based tokenizer originally designed for video re-
+construction, in the comparison. To ensure fair evaluation in the image setting,
+we adapt WF-VAE to operate on single-frame inputs (T=1) using the image
+training pipeline with comparable optimization settings. Despite this adapta-
+tion, DeBaT consistently achieves better reconstruction performance.
+
+
+C.2  Frequency-aware and Perceptual Evaluation
+
+To further analyze the reconstruction quality of our approach in comparison
+with visual tokenizers trained on large-scale datasets, we evaluate several such
+tokenizers alongside our proposed framework, DeBaT. The comparison focuses
+on both perceptual and frequency-aware reconstruction metrics. Specifically, we
+report commonly used image reconstruction metrics such as PSNR, SSIM, and
+reconstruction loss, together with frequency-sensitive measures including low-
+frequency loss and high-frequency loss. In addition, we evaluate perceptual sim-
+ilarity using the LPIPS metric.
+   Table 2 summarizes the results across multiple latent tokenizers and our pro-
+posed DeBaT model. The results indicate that DeBaT consistently achieves su-
+perior frequency-aware reconstruction while maintaining strong perceptual qual-
+ity. These findings highlight the effectiveness of decoupled frequency learning for
+latent tokenization. Our proposed DeBaT achieves the strongest performance
+across all metrics, demonstrating superior preservation of both coarse structure
+and fine high-frequency details. It also ranks competitively in perceptual simi-
+larity, outperforming prior models such as KL-VAE† and VQ-VAE† trained on
+OpenImages [26], as well as DC-AE∗models trained on broader multi-domain
+datasets including ImageNet [8], SAM [24], FFHQ [20], and Mapillary Vistas [36].
+We also emphasize that DeBaT is trained only on the ImageNet dataset, whereas
+other baselines rely here on substantially larger training sets. Given its strong
+
+=== PDF PAGE 21 ===
+                                                 DeBaT     21
+
+
+             Visual Tokenizer    Tokenizer Latent  PSNR(↑)   SSIM(↑)
+
+          DC-AE [7]           8x8x32                 23.75        0.69
+          DC-AE [7]           4x4x128                23.47        0.69
+          DC-AE [7]           4x4x512                23.07        0.66
+           SD-VAE [42]         16x16x16               24.91        0.74
+          KL-VAE [28]         16x16x16               25.76        0.75
+          MS-VQ-VAE [48]     16x16x32 (4096)        22.58        0.67
+          RQ-VAE [27]         8x8x16 (16384)         20.11        0.54
+           TiTok-VQ-VAE [58]   128x64 (8192)           24.02        0.67
+           TiTok-VQ-VAE [58]   32x64 (8192)            20.72        0.53
+            TiTok-VAE [58]       256x16                 22.03        0.60
+            TiTok-VAE [58]       128x16                 20.46        0.53
+            TiTok-VAE [58]       64x16                   19.07        0.47
+          VQ-VAE [1]          16x16x256 (1024)       19.44        0.52
+          VQ-VAE [1]          16x16x256 (16384)      19.96        0.54
+          WF-VAE [29]         32x32x16               29.00        0.88
+            LiteVAE [43]         32x32x12               28.59        0.86
+          VA-VAE [56]         16x16x32               26.26        0.80
+         DeBaT (Ours)     16x16x32            30.03       0.90
+
+Table 1: Additional quantitative comparison of the visual tokenizers from Table 1 in
+main paper based on reconstruction fidelity measured using PSNR and SSIM (higher
+is better). These tokenizers are trained on the ImageNet-1k training set and evaluated
+on the validation set. Tokenizer latent denotes the latent dimensionality (height ×
+width × channels). For quantized tokenizers, the codebook size is shown in parenthe-
+ses. For TiTok variants with a 1D latent space, the latent dimension is represented as
+(number of tokens × channels). Higher PSNR and SSIM indicate better reconstruction
+quality. Wavelet-based tokenizers such as LiteVAE and our DeBaT substantially out-
+perform other methods in these metrics. DeBat performs best.
+
+
+
+
+performance under this constraint, we expect that training DeBaT on larger and
+more diverse datasets would lead to even greater improvements.
+   The DC-AE, KL-VAE, and VQ-VAE architectures and training setups follow
+the implementations introduced in respective prior work [42,51,52].
+
+
+C.3  Longer Generation Training
+
+Following standard DiT-based ImageNet protocols, prior work commonly trains
+for 400K iterations with a batch size of 256, corresponding to roughly 80 epochs,
+and reports continued improvements with extended training [39]. We therefore
+use 400K iterations as a reference point and further evaluate DeBaT under
+a longer training schedule. Table 3 compares DeBaT with VA-VAE after 128
+epochs on ImageNet at 256×256 resolution.
+   At 128 epochs, DeBaT improves generation quality over VA-VAE, reducing
+gFID-50K from 4.95 to 3.09 while increasing precision and recall from 0.76/0.62
+to 0.83/0.69. These results indicate that DeBaT’s frequency-decoupled represen-
+tation remains beneficial under longer generation training.
+
+
+C.4  Ablation on Low- and High-Frequency Channel Allocation
+
+The main paper reports the default channel configuration used by DeBaT, where
+both the low-frequency (LF) and high-frequency (HF) branches employ latent
+
+=== PDF PAGE 22 ===
+22     T. Medi et al.
+
+
+   Tokenizer  Tokenizer    PSNR SSIM  Recon.  LF. Loss  HF. Loss  LPIPS
+              Config
+  DC-AE∗    8x8x32            23.32    0.68    0.0213    0.0521      0.0110    0.1708
+  DC-AE∗    4x4x128           23.47    0.69    0.0206    0.0499      0.0109    0.1689
+  DC-AE∗    4x4x512           23.43    0.68    0.0208    0.0510      0.0107    0.1756
+   KL-VAE†   64x64x3           28.63    0.86    0.0064    0.0097      0.0053    0.0722
+   KL-VAE†   32x32x4           24.67    0.73    0.0156    0.0348      0.0091    0.1459
+   KL-VAE†   16x16x16          24.46    0.72    0.0163    0.0365      0.0096    0.1529
+   KL-VAE†   8x8x64            22.50    0.64    0.0251    0.0640      0.0121    0.2089
+   KL-VAE†   4x4x128           23.10    0.66    0.0241    0.0652      0.0105    0.1708
+  VQ-VAE†   64x64x3(8192)     28.57    0.86    0.0064    0.0104      0.0051    0.0693
+  VQ-VAE†   32x32x4(16384)    23.43    0.69    0.0203    0.0475      0.0113    0.1701
+  VQ-VAE†   32x32x4(256)      22.70    0.66    0.0239    0.0569      0.0128    0.1848
+  VQ-VAE†   16x16x8(16384)    20.94    0.57    0.0352    0.1006      0.0134    0.2637
+   KL-VAE‡   32x32x4(ema)     25.22    0.75    0.0145    0.0313      0.0089    0.1345
+  DebaT    16x16x32       30.03   0.90   0.0044   0.0114    0.0020   0.0940
+
+Table 2: Comparison of DeBaT (trained only on ImageNet-1k) to latent tokenizers
+from related work trained on large-scale datasets. All models are evaluated on the
+ImageNet validation set across pixel-level, frequency-aware, and perceptual metrics.
+The tokenizer configuration column reports the latent spatial resolution and channel
+count, shown as h×w×c; for VQ-based models, the vocabulary size v  is shown in
+parentheses. Higher values are better for PSNR and SSIM, while lower values indicate
+better performance for reconstruction loss, low-frequency loss, high-frequency loss, and
+LPIPS. ∗Models trained on ImageNet, SAM, FFHQ, and Mapillary Vistas. † Models
+trained on OpenImages. ‡ Models fine-tuned on OpenImages and LAION.
+
+
+
+
+ Dataset     Res.   Epochs Latent Dim. Tokenizer PSNR↑gFID-50K↓Pre.↑Rec.↑
+
+ ImageNet 256×256  128   16×16×32  VA-VAE  26.26     4.95     0.76  0.62
+ ImageNet 256×256  128   16×16×32  DeBaT  30.03    3.09    0.83 0.69
+
+Table 3: Longer generation training on ImageNet at 256×256 resolution. DeBaT main-
+tains its advantage over VA-VAE after 128 epochs, improving both reconstruction fi-
+delity and generation quality.
+
+
+
+
+representations of size 16 × 16 × 16. To further investigate the effect of channel
+allocation, we perform an ablation by varying the number of latent channels
+assigned to the low-frequency branch (CL) and high-frequency branch (CH). We
+evaluate four configurations while keeping all other training settings unchanged.
+we observe that increasing the capacity of the LF branch provides larger gains
+than increasing the HF branch alone, while enlarging both branches achieves the
+best overall performance.
+   Table 4 shows that allocating additional latent channels to the low-frequency
+branch yields larger improvements than increasing the capacity of the high-
+frequency branch alone, reducing both rFID and LPIPS while improving PSNR.
+Increasing the number of channels in both branches further enhances recon-
+struction quality, achieving the best performance across all evaluation metrics.
+These results suggest that allocating sufficient capacity to the low-frequency
+representation is particularly important for preserving global image structure,
+
+=== PDF PAGE 23 ===
+                                                 DeBaT     23
+
+   Input   WF-VAE   LiteVAE     Ours    WF-VAE   LiteVAE     Ours
+
+
+
+
+
+Recon. Error:    0.0025        0.0028        0.0018     Error Map   Error Map   Error Map
+
+
+
+
+
+Recon. Error:    0.0024        0.0023        0.0018     Error Map   Error Map   Error Map
+
+
+
+
+
+Recon. Error:    0.0016        0.0015        0.0012     Error Map   Error Map   Error Map
+
+
+
+
+
+Recon. Error:    0.0002        0.0002        0.0001     Error Map   Error Map   Error Map
+
+
+
+
+
+Recon. Error:    0.0029        0.0030        0.0022     Error Map   Error Map   Error Map
+
+Fig. 4: Comparison of DeBaT reconstructions with other wavelet based approaches
+LiteVAE and WF-VAE. DeBaT have consistently lower values of reconstruction error
+than WF-VAE and LiteVAE, visible as fine details that are correctly reconstructed
+in particular in structured regions like persons’ faces, the texture of the dress or the
+printed text.
+
+
+
+whereas increasing both branches provides complementary benefits at the cost
+of increased latent dimensionality.
+
+
+D  Qualitative Comparisons
+
+
+D.1  Qualitative Comparison with Wavelet-based Tokenizers
+
+We qualitatively compare DeBaT reconstruction with wavelet-based latent VAE
+tokenizer, namely WF-VAE [29] and LiteVAE [43] (see Figure 2 in the main
+paper). The goal of this comparison  is to highlight the benefit of the pro-
+posed frequency-decoupled tokenizer. By explicitly separating frequency band
+and learning dedicated latent code for both low-frequency and high-frequency
+component, DeBaT improves reconstruction quality.
+
+=== PDF PAGE 24 ===
+24     T. Medi et al.
+
+
+                 Configuration  CL  CH  rFID↓  LPIPS↓  PSNR↑  SSIM↑
+
+                Standard       16   16    0.21     0.094     30.03     0.90
+              More LF       32   16    0.17     0.067     31.09     0.91
+              More HF       16   32    0.21     0.087     30.84     0.90
+               Both          32   32   0.15   0.057   31.83    0.91
+
+Table 4: Ablation of latent channel allocation between the low-frequency (CL) and
+high-frequency (CH) branches. Increasing the capacity of the low-frequency branch
+provides larger gains than increasing the high-frequency branch alone, while enlarging
+both can boost reconstruction quality further.
+
+
+
+
+
+Fig. 5: Log residual power spectra of ImageNet validation images. Each set shows
+the input image (left), the residual power spectrum of VA-VAE (middle), and that of
+DeBaT (right). The residual power spectrum represents the Fourier-domain energy of
+the reconstruction error, where lower values indicate better reconstruction. Compared
+with VA-VAE, DeBaT consistently exhibits lower residual energy across both low- and
+high-frequency bands, demonstrating improved preservation of fine details, textures,
+and overall frequency-aware reconstruction.
+
+
+
+   Figure 4 present qualitative reconstruction comparison. DeBaT produce more
+faithful reconstruction than WF-VAE and LiteVAE, with improved preservation
+of structural detail and fine texture. This improvement is also reflected in the
+corresponding error map, where DeBaT exhibit lower reconstruction error mag-
+nitude compared with baseline method.
+    It is important to note that WF-VAE was originally designed as a tokenizer
+for video reconstruction. To enable fair comparison in our setting, we adapt
+WF-VAE to the image modality and train it with comparable training budget
+as DeBaT. Specifically, we adapt WF-VAE to the image modality by training
+the model with single-frame inputs (T=1) using the image dataset loader. In
+this setting, the original 3D convolutional architecture operates over a temporal
+dimension of length one. The model is trained using the distributed training
+
+=== PDF PAGE 25 ===
+                                                 DeBaT     25
+
+
+
+
+
+  HF Input    HF Input    HF Input       LF Input     LF Input     LF Input
+
+
+
+
+
+VA-VAE     VA-VAE     VA-VAE        VA-VAE     VA-VAE     VA-VAE
+RE: 0.0078    RE: 0.0054    RE: 0.0061       RE: 0.0016    RE: 0.0006    RE: 0.0017
+
+
+
+
+
+DeBaT      DeBaT      DeBaT         DeBaT      DeBaT      DeBaT
+RE: 0.0033    RE: 0.0013    RE: 0.0019       RE: 0.0008    RE: 0.0002    RE: 0.0007
+
+Fig. 6: Visualization of high- and low-frequency inputs (HF & LF Inputs) and their
+corresponding reconstructions. The left side shows the high-frequency inputs and their
+VA-VAE and DeBaT reconstructions, while the right side presents the analogous low-
+frequency components. DeBaT consistently achieves lower reconstruction error (RE)
+across both frequency bands, reflecting improved fidelity.
+
+
+
+pipeline with the same optimization hyperparameters as the original implemen-
+tation with batch size of 16 for 200k iterations.
+
+
+D.2  Frequency-Domain Error Analysis
+
+We further analyze reconstruction behavior using the log residual power spec-
+trum. The residual spectrum measures the Fourier-domain energy of the recon-
+struction error, revealing how much information the model fails to reproduce at
+each spatial frequency. In the visualization, red indicates higher residual energy
+(larger reconstruction error), while blue indicates lower residual energy. The cen-
+ter of the spectrum corresponds to low-frequency components that capture global
+structure, whereas regions farther from the center correspond to high-frequency
+components responsible for fine details and textures.
+   Figure 4 shows the input image (left), the residual spectrum of VA-VAE
+(middle), and that of DeBaT (right). Across examples, VA-VAE exhibits higher
+residual energy across both low- and high-frequency regions, indicating larger
+reconstruction error throughout the spectrum. In contrast, DeBaT consistently
+suppresses residual energy, particularly in high-frequency regions, demonstrating
+improved preservation of fine structures and textures.
+
+=== PDF PAGE 26 ===
+26     T. Medi et al.
+
+
+ Generation   Train Image   Generation   Train Image   Generation   Train Image
+
+
+
+
+
+   L2 Error:        0.2117       L2 Error:        0.1497       L2 Error:        0.2415
+
+
+
+
+
+   L2 Error:        0.1568       L2 Error:        0.2404       L2 Error:        0.1736
+
+
+
+
+
+   L2 Error:        0.2526       L2 Error:        0.2325       L2 Error:        0.2558
+
+Fig. 7: Class-conditional generation results (classes :golden retriever, sea anemone,
+castle) of DeBaT. The generation column shows generated samples, while the corre-
+sponding training image column shows the nearest training image from training set for
+generation on left using normalized ℓ2 distance. The generated images are diverse.
+
+
+
+  We compare DeBaT with VA-VAE, a strong pixel-wise spatial tokenizer,
+to contrast spatial tokenization with frequency-aware tokenization. The results
+highlight the benefit of explicitly modeling frequency bands in DeBaT, leading
+to more accurate frequency-aware reconstruction. Additionally, Figure 6 shows
+reconstruction errors for low- and high-frequency inputs, further demonstrating
+that DeBaT reconstructs both frequency components more accurately than VA-
+VAE.
+
+
+D.3  Qualitative Generation Evaluation
+
+We analyze class-conditional generation behavior of DeBaT by comparing gener-
+ated samples with the nearest training image from the training set using normal-
+ized ℓ2 distance. Figure 7 shows examples from three classes: golden retriever, sea
+anemone, and castle. For each generated image, we retrieve the closest training
+image based on normalized ℓ2 similarity to assess whether the model memorizes
+training samples. Across examples, the generated samples exhibit noticeable vari-
+ation from the nearest training images despite belonging to the same semantic
+class. The normalized ℓ2 distances further indicate that the generated images are
+not near-duplicates of training examples. These observations suggest that De-
+BaT learns meaningful class-conditional representations and generates diverse
+samples rather than memorizing training data.
+
+=== PDF PAGE 27 ===
+                                                 DeBaT     27
+
+References
+
+ 1. Esser et al., P.e.a.: Taming transformers for high-resolution image synthesis. In:
+    Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recog-
+    nition (CVPR). pp. 12873–12883 (June 2021)
+ 2. Bachmann, R., Allardice, J., Mizrahi, D., Fini, E., Kar, O.F., Amirloo, E., El-
+    Nouby, A., Zamir, A., Dehghan, A.: Flextok: Resampling images into 1d token
+    sequences of flexible length. In: Forty-second International Conference on Machine
+    Learning (2025)
+ 3. Björk, S., Myhre, J.N., Johansen, T.H.: Simpler is better: Spectral regulariza-
+    tion and up-sampling techniques for variational autoencoders. In: ICASSP 2022-
+    2022 IEEE International Conference on Acoustics, Speech and Signal Processing
+   (ICASSP). pp. 3778–3782. IEEE (2022)
+ 4. Blattmann, A., Rombach, R., Ling, H., Dockhorn, T., Kim, S.W., Fidler, S., Kreis,
+    K.: Align your latents: High-resolution video synthesis with latent diffusion models.
+     In: Proc. CVPR 2023 (2023)
+ 5. Chang, H., Zhang, H., Jiang, L., Liu, C., Freeman, W.T.: Maskgit: Masked genera-
+     tive image transformer. In: Proceedings of the IEEE/CVF Conference on Computer
+    Vision and Pattern Recognition. pp. 11315–11325 (2022)
+ 6. Chen, H., Han, Y., Chen, F., Li, X., Wang, Y., Wang, J., Wang, Z., Liu, Z., Zou,
+    D., Raj, B.: Masked autoencoders are effective tokenizers for diffusion models. In:
+    Forty-second International Conference on Machine Learning (2025)
+ 7. Chen, J., Cai, H., Chen, J., Xie, E., Yang, S., Tang, H., Li, M., Han, S.: Deep com-
+    pression autoencoder for efficient high-resolution diffusion models. In: International
+    Conference on Learning Representations. vol. 2025, pp. 96539–96560 (2025)
+ 8. Deng, J., Dong, W., Socher, R., Li, L.J., Li, K., Fei-Fei, L.: Imagenet: A large-
+    scale hierarchical image database. In: 2009 IEEE conference on computer vision
+   and pattern recognition. pp. 248–255. Ieee (2009)
+ 9. Dong, Y., Zuo, Q., Gu, X., Yuan, W., Zhao, Z., Dong, Z., Bo, L., Huang, Q.:
+    Gpld3d: Latent diffusion of 3d shape generative models by enforcing geometric
+   and physical priors. In: Proc. CVPR 2024. p. 56–66 (2024)
+10. Gal, R., Hochberg, D.C., Bermano, A., Cohen-Or, D.: Swagan: A style-based
+    wavelet-driven generative model. ACM Transactions on Graphics (TOG) 40(4),
+    1–11 (2021)
+11. Gao, S., Zhou, P., Cheng, M.M., Yan, S.: Masked diffusion transformer is a strong
+    image synthesizer. In: Proceedings of the IEEE/CVF International Conference on
+   Computer Vision. pp. 23164–23173 (2023)
+12. Gao, S., Zhou, P., Cheng, M.M., Yan, S.: Mdtv2: Masked diffusion transformer is
+    a strong image synthesizer. arXiv preprint arXiv:2303.14389 (2023)
+13. Guth, F., Coste, S., De Bortoli, V., Mallat, S.: Wavelet score-based generative
+    modeling. In: NeurIPS (2022)
+14. Heusel, M., Ramsauer, H., Unterthiner, T., Nessler, B., Hochreiter, S.: Gans trained
+   by a two time-scale update rule converge to a local nash equilibrium. In: Advances
+    in Neural Information Processing Systems (NeurIPS). pp. 6626–6637 (2017)
+15. Huang, L., Fang, R., Zhang, A., Song, G., Liu, S., Liu, Y., Li, H.: Fouriscale: A fre-
+    quency perspective on training-free high-resolution image synthesis. In: European
+    conference on computer vision. pp. 196–212. Springer (2024)
+16. Huang, Z., Qiu, X., Ma, Y., Zhou, Y., Chen, J., Zhang, H., Zhang, C., Li, X.: NFIG:
+    Multi-scale autoregressive image generation via frequency ordering. In: NeurIPS
+    (2025)
+
+=== PDF PAGE 28 ===
+28     T. Medi et al.
+
+
+17. Hui, K.H., Sanghi, A., Rampini, A., Malekshan, K.R., Liu, Z., Shayani, H., Fu,
+    C.W.: Make-a-shape: a ten-million-scale 3d shape model. In: Forty-first Interna-
+    tional Conference on Machine Learning (2024)
+18. Jiang, H., Luo, A., Fan, H., Han, S., Liu, S.: Low-light image enhancement with
+    wavelet-based diffusion models. ACM Transactions on Graphics (TOG) 42(6), 1–
+    14 (2023)
+19. Jiang, L., Dai, B., Wu, W., Loy, C.C.: Focal frequency loss for image reconstruc-
+    tion and synthesis. In: Proceedings of the IEEE/CVF International Conference on
+   Computer Vision (ICCV). pp. 13919–13929 (October 2021)
+20. Karras, T., Laine, S., Aila, T.: A style-based generator architecture for generative
+    adversarial networks. In: CVPR (2019)
+21. Kim, C., Moon, S.J., Park, G.M.: Wine: Wavelet-guided gan inversion and editing
+     for high-fidelity refinement. In: 2025 IEEE/CVF Winter Conference on Applica-
+    tions of Computer Vision (WACV). pp. 4523–4532 (2025)
+22. Kim, Y., Hwang, G., Zhang, J., Park, E.: Diffusehigh: Training-free progressive
+    high-resolution image synthesis through structure guidance. In: Proceedings of the
+   AAAI conference on artificial intelligence. pp. 4338–4346 (2025)
+23. Kingma, D.P., Welling, M.: Auto-encoding  variational bayes. arXiv preprint
+    arXiv:1312.6114 (2013)
+24. Kirillov, A., Mintun, E., Ravi, N., Mao, H., Rolland, C., Gustafson, L., Xiao, T.,
+    Whitehead, S., Berg, A.C., Lo, W.Y., et al.: Segment anything. In: Proceedings of
+    the IEEE/CVF international conference on computer vision. pp. 4015–4026 (2023)
+25. Kouzelis, T., Kakogeorgiou, I., Gidaris, S., Komodakis, N.: Eq-vae: Equivariance
+    regularized latent space for improved generative image modeling. arXiv preprint
+    arXiv:2502.09509 (2025)
+26. Krasin, I., Duerig, T., Alldrin, N., Ferrari, V., Abu-El-Haija, S., Kuznetsova, A.,
+   Rom, H., Uijlings, J., Popov, S., Veit, A., et al.: Openimages: A public dataset for
+    large-scale multi-label and multi-class image classification. Dataset available from
+    https://github. com/openimages 2(3), 18 (2017)
+27. Lee, D., Kim, C., Kim, S., Cho, M., Han, W.S.: Autoregressive image genera-
+    tion using residual quantization. In: Proceedings of the IEEE/CVF Conference on
+   Computer Vision and Pattern Recognition (CVPR). pp. 11523–11532 (June 2022)
+28. Li, T., Tian, Y., Li, H., Deng, M., He, K.: Autoregressive image generation with-
+    out vector quantization. Advances in Neural Information Processing Systems 37,
+    56424–56445 (2024)
+29. Li, Z., Lin, B., Ye, Y., Chen, L., Cheng, X., Yuan, S., Yuan, L.: Wf-vae: Enhancing
+    video vae by wavelet-driven energy flow for latent video diffusion model. In: Proc.
+   IEEE/CVF Conf. on Computer Vision and Pattern Recognition (CVPR) (2025)
+30. Luo, S., Tan, Y., Huang, L., Li, J., Zhao, H.: Latent consistency models: Synthe-
+    sizing high-resolution images with few-step inference. In: Proc. ICLR 2024 (2024)
+31. Ma, N., Goldstein, M., Albergo, M.S., Boffi, N.M., Vanden-Eijnden, E., Xie, S.:
+     Sit: Exploring flow and diffusion-based generative models with scalable interpolant
+    transformers. In: European Conference on Computer Vision. pp. 23–40. Springer
+    (2024)
+32. Medi, T., Rampini, A., Reddy, P., Jayaraman, P.K., Keuper, M.: 3d-wag: Hierar-
+    chical wavelet-guided autoregressive generation for high-fidelity 3d shapes. arXiv
+    preprint arXiv:2411.19037 (2024)
+33. Medi, T., Tayyub, J., Sarmad, M., Lindseth, F., Keuper, M.: Fullformer: Gener-
+    ating shapes inside shapes. In: Köthe, U., Rother, C. (eds.) Pattern Recognition.
+    pp. 147–162. Springer Nature Switzerland, Cham (2024)
+
+=== PDF PAGE 29 ===
+                                                 DeBaT     29
+
+
+34. Miwa, K., Sasaki, K., Arai, H., Takahashi, T., Yamaguchi, Y.: One-d-piece: Image
+    tokenizer meets quality-controllable compression. arXiv preprint arXiv:2501.10064
+    (2025)
+35. Mulcahy, C.: Image compression using the haar wavelet transform. Spelman Science
+   and Mathematics Journal 1(1), 22–31 (1997)
+36. Neuhold, G., Ollmann, T., Rota Bulo, S., Kontschieder, P.: The mapillary vistas
+    dataset for semantic understanding of street scenes. In: ICCV (2017)
+37. Oquab, M., Darcet, T., Moutakanni, T., Vo, H., Szafraniec, M., Khalidov, V.,
+    Fernandez, P., Haziza, D., Massa, F., El-Nouby, A., et al.: Dinov2: Learning robust
+    visual features without supervision. arXiv preprint arXiv:2304.07193 (2023)
+38. Peebles, W., Xie, S.: Scalable diffusion models with transformers. In: Proceedings
+     of the IEEE/CVF International Conference on Computer Vision. pp. 4195–4205
+    (2023)
+39. Peebles, W., Xie, S.: Scalable diffusion models with transformers. In: Proceedings of
+    the IEEE/CVF international conference on computer vision. pp. 4195–4205 (2023)
+40. Phung, H., Dao, Q., Tran, A.: Wavelet diffusion models are fast and scalable image
+    generators. In: Proceedings of the IEEE/CVF Conference on Computer Vision and
+    Pattern Recognition (CVPR). pp. 10199–10208 (June 2023)
+41. Qian, Y., Cai, Q., Pan, Y., Li, Y., Yao, T., Sun, Q., Mei, T.: Boosting diffusion
+    models with moving average sampling in frequency domain. In: Proceedings of the
+   IEEE/CVF conference on computer vision and pattern recognition. pp. 8911–8920
+    (2024)
+42. Rombach, R., Blattmann, A., Lorenz, D., Esser, P., Ommer, B.: High-resolution
+    image synthesis with latent diffusion models. In: Proceedings of the IEEE/CVF
+    Conference on Computer Vision and Pattern Recognition (CVPR). pp. 10684–
+    10695 (June 2022)
+43. Sadat,  S., Buhmann,  J.,  Bradley,  D.,  Hilliges,  O., Weber,  R.M.:  Litevae:
+    Lightweight and efficient variational autoencoders for latent diffusion models. Ad-
+    vances in Neural Information Processing Systems 37, 3907–3936 (2024)
+44. Skorokhodov, I., Girish, S., Hu, B., Menapace, W., Li, Y., Abdal, R., Tulyakov,
+     S., Siarohin, A.: Improving the  diffusability  of autoencoders. arXiv preprint
+    arXiv:2502.14831 (2025)
+45. Sun, P., Jiang, Y., Chen, S., Zhang, S., Peng, B., Luo, P., Yuan, Z.: Autoregres-
+    sive model beats diffusion: Llama for scalable image generation. arXiv preprint
+    arXiv:2406.06525 (2024)
+46. Szegedy, C., Vanhoucke, V., Ioffe, S., Shlens, J., Wojna, Z.: Rethinking the incep-
+    tion architecture for computer vision. In: Proceedings of the IEEE Conference on
+   Computer Vision and Pattern Recognition (CVPR). pp. 2818–2826 (2016)
+47. Takida, Y., Ikemiya, Y., Shibuya, T., Shimada, K., Choi, W., Lai, C.H., Murata,
+    N., Uesaka, T., Uchida, K., Liao, W.H., et al.: Hq-vae: Hierarchical discrete repre-
+    sentation learning with variational bayes. arXiv preprint arXiv:2401.00365 (2023)
+48. Tian, K., Jiang, Y., Yuan, Z., Peng, B., Wang, L.: Visual autoregressive model-
+     ing: Scalable image generation via next-scale prediction. In: Advances in Neural
+    Information Processing Systems. vol. 37, pp. 84839–84865 (2024)
+49. Vahdat, A., Kautz, J.: NVAE: A deep hierarchical variational autoencoder. In:
+    Neural Information Processing Systems (NeurIPS) (2020)
+50. Van Den Oord, A., Vinyals, O., et al.: Neural discrete representation learning.
+    Advances in neural information processing systems 30 (2017)
+51. Xie, E., Chen, J., Chen, J., Cai, H., Tang, H., Lin, Y., Zhang, Z., Li, M., Zhu, L.,
+    Lu, Y., Han, S.: Sana: Efficient high-resolution image synthesis with linear diffusion
+    transformer (2024), https://arxiv.org/abs/2410.10629
+
+=== PDF PAGE 30 ===
+30     T. Medi et al.
+
+
+52. Xie, E., Chen, J., Zhao, Y., Yu, J., Zhu, L., Lin, Y., Zhang, Z., Li, M., Chen, J., Cai,
+    H., et al.: Sana 1.5: Efficient scaling of training-time and inference-time compute
+    in linear diffusion transformer (2025), https://arxiv.org/abs/2501.18427
+53. Xu, W., Yue, X., Wang, Z., Teng, Y., Zhang, W., Liu, X., Zhou, L., Ouyang, W.,
+    Bai, L.: Exploring representation-aligned latent space for better generation. arXiv
+    preprint arXiv:2502.00359 (2025)
+54. Yang, X., Zhou, D., Feng, J., Wang, X.: Diffusion probabilistic model made slim.
+     In: Proceedings of the IEEE/CVF Conference on computer vision and pattern
+    recognition. pp. 22552–22562 (2023)
+55. Yao, J., Wang, C., Liu, W., Wang, X.: Fasterdit: Towards faster diffusion trans-
+    formers training without architecture modification. Advances in neural information
+    processing systems 37, 56166–56189 (2024)
+56. Yao, J., Yang, B., Wang, X.: Reconstruction vs. generation: Taming optimization
+   dilemma in latent diffusion models. In: Proceedings of the IEEE/CVF Conference
+   on Computer Vision and Pattern Recognition (2025)
+57. Yu, L., Lezama, J., Gundavarapu, N.B., Versari, L., Sohn, K., Minnen, D., Cheng,
+    Y., Gupta, A., Gu, X., Hauptmann, A.G., et al.: Language model beats diffusion-
+    tokenizer is key to visual generation. In: International Conference on Learning
+    Representations. vol. 2024, pp. 765–783 (2024)
+58. Yu, Q., Weber, M., Deng, X., Shen, X., Cremers, D., Chen, L.C.: An image is worth
+    32 tokens for reconstruction and generation. In: Advances in Neural Information
+    Processing Systems. vol. 37, pp. 128940–128966 (2024)
+59. Yu, S., Kwak, S., Jang, H., Jeong, J., Huang, J., Shin, J., Xie, S.: Representation
+    alignment for generation: Training diffusion transformers is easier than you think.
+    arXiv preprint arXiv:2410.06940 (2024)
+60. Yu, Y., Zhan, F., Lu, S., Pan, J., Ma, F., Xie, X., Miao, C.: Wavefill: A wavelet-
+    based generation network for image inpainting. In: Proceedings of the IEEE/CVF
+    International Conference on Computer Vision (ICCV). pp. 14114–14123 (October
+    2021)
+61. Yuan, X., Li, L., Wang, J., Yang, Z., Lin, K., Liu, Z., Wang, L.: Spatial-frequency
+    u-net for denoising diffusion probabilistic models. arXiv preprint arXiv:2307.14648
+    (2023)
+62. Zhang,  J., Huang, Q., Liu,  J., Guo, X., Huang, D.: Diffusion-4k: Ultra-high-
+    resolution image synthesis with latent diffusion models. In: Proceedings of the
+   Computer Vision and Pattern Recognition Conference (CVPR). pp. 23464–23473
+    (June 2025)
+63. Zhang, R., Isola, P., Efros, A.A., Shechtman, E., Wang, O.: The unreasonable
+    effectiveness of deep features as a perceptual metric. In: Proceedings of the IEEE
+    Conference on Computer Vision and Pattern Recognition (CVPR). pp. 586–595
+    (2018)
+64. Zhao, C., Cai, W., Dong, C., Hu, C.: Wavelet-based fourier information interaction
+    with frequency diffusion adjustment for underwater image restoration. In: Proceed-
+    ings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition.
+    pp. 8281–8291 (2024)
+65. Zheng, H., Nie, W., Vahdat, A., Anandkumar, A.: Fast training of diffusion models
+    with masked transformers. arXiv preprint arXiv:2306.09305 (2023)
+66. Zhou, C., Wang, X., Zhang, M.: Unifying generation and prediction on graphs with
+    latent graph diffusion. In: Proc. NeurIPS 2024 (2024)

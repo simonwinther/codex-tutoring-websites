@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const output = fileURLToPath(new URL('../_site/', import.meta.url));
 const { base } = JSON.parse(await readFile(join(output, 'sites.json'), 'utf8'));
 const port = Number(process.env.PORT || 4178);
-const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.pdf': 'application/pdf', '.woff': 'font/woff', '.woff2': 'font/woff2', '.ico': 'image/x-icon' };
+const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.pdf': 'application/pdf', '.woff': 'font/woff', '.woff2': 'font/woff2', '.ico': 'image/x-icon' };
 
 createServer(async (request, response) => {
   try {

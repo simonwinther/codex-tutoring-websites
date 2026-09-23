@@ -1,0 +1,987 @@
+=== PDF PAGE 1 ===
+       Under review as a conference paper at ICLR 2026
+
+
+000  PARAFLOW:   PARALLEL  SAMPLING  FOR  FLOW001
+
+002   MATCHING MODELS
+003
+004
+       Anonymous authors005
+         Paper under double-blind review
+006
+007
+
+008
+009                            ABSTRACT
+010
+011             This paper approaches the fundamental challenge of accelerating the inherently
+012              autoregressive nature of sampling in Flow Matching (FM) models like Stable Dif-
+013              fusion 3 and Flux through a numerical systems perspective. Specifically, we in-
+014             troduce a unified framework that recasts the autoregressive sampling process as
+                 solving a system of triangular nonlinear equations (TNEs), thereby facilitating a015
+               paradigm shift toward non-autoregressive sampling featuring parallel vector field
+016
+                computation across multiple timesteps. Within this generic framework, we estab-
+017
+                    lish that: (1) the TNE system admits a unique solution corresponding precisely
+018               to the autoregressive sampling trajectory; (2) solving the TNE system guaran-
+019               tees convergence to this exact trajectory in far fewer sequential iterations. Build-
+020              ing on these insights, we present ParaFlow, a training-free, step-parallel sampler
+021               for accelerating autoregressive FM samplers. Extensive experiments validate that
+022            ParaFlow achieves up to a 4ˆ reduction in sequential sampling steps and signifi-
+023              cant wall-clock speedup of up to 4.3ˆ, with negligible impact on FID and CLIP
+024               scores. The source code will be released publicly.
+
+025
+026
+      1  INTRODUCTION027
+028
+       Flow Matching (FM) has emerged as a leading framework for high-fidelity generative model-
+029
+         ing, powering recent state-of-the-art systems such as Stable Diffusion 3 (Esser et al., 2024) and
+030     Flux (Black Forest Labs, 2024). FM models learn a time-dependent vector field that transports a
+031     simple prior distribution to the data distribution via an ordinary differential equation (ODE). Thus,
+032     sampling reduces to numerically integrating this ODE, an inherently autoregressive procedure that
+033     requires tens of sequential evaluations of a large neural network, constituting a major bottleneck for
+034     real-time and interactive use.
+035    Two main strategies have been explored to mitigate this cost. The first develops more efficient
+036     numerical solvers: high-order methods such as DPM-Solver (Lu et al., 2022a;b) and task-specific
+037     solvers (Shaul et al., 2023; Frankel et al., 2025) reduce the number of function evaluations (NFEs),
+038     enabling generation in fewer steps, but remain fully sequential. The second pursues model distilla-
+039      tion (Salimans & Ho, 2022), compressing multi-step teachers into student models capable of few-
+040     shot or even one-shot generation. Approaches such as Latent Consistency Models (LCMs) (Luo
+041      et al., 2023), based on Consistency Models (Song et al., 2023), achieve strong results but require
+        expensive retraining and degrade fidelity. Both methods reduce the step count but do not remove042
+         sequential dependencies.
+043
+044     In contrast to these approaches, our work departs from the sequential paradigm. We propose
+045    ParaFlow, a framework that accelerates sampling not by reducing steps but by executing them
+046      in parallel. Our key idea is to recast the entire sampling trajectory—ordinarily produced by an ODE
+       solver—as a system of Triangular Nonlinear Equations (TNEs). This reformulation decouples de-047
+        pendencies across timesteps, enabling simultaneous evaluation of the vector field at multiple steps.
+048
+049   We show that the proposed TNE system admits a unique solution mathematically identical to the
+050      trajectory of the original autoregressive sampler, ensuring no loss in sample quality. To solve this
+        system efficiently, we adopt a fixed-point iteration scheme that converges rapidly to the exact so-051
+         lution. A sliding-window implementation further makes the approach computationally feasible for
+052
+        long sampling chains.
+053
+       Our main contributions are:
+
+
+                                              1
+
+=== PDF PAGE 2 ===
+       Under review as a conference paper at ICLR 2026
+
+
+
+
+
+054
+                  • We are the first to formulate the sampling process of Flow Matching models as a system of
+055           TNEs, enabling step-level parallelism.
+056
+057              • We propose an efficient, parallel fixed-point solver, ParaFlow, with theoretical guarantees
+                 of convergence to the exact autoregressive trajectory.058
+059              • Through extensive experiments on state-of-the-art flow-matching based models like Stable
+060              Diffusion 3 and Flux, we demonstrate wall-clock speedups of 1.4-4.3ˆ and a reduction in
+061              sequential operations by up to 4ˆ, with negligible impact on generation quality.
+062
+063     ParaFlow is a training-free, plug-and-play accelerator that is compatible with existing pre-trained
+     FM models, opening a new direction for efficient model inference.064
+065
+066    2  RELATED WORK
+067
+068     Accelerating generative model sampling is a long-standing research problem. For diffusion and
+069     flow-based models, which rely on iterative refinement, this is particularly critical.
+070    Numerical ODE Solvers for Flow Matching. Flow Matching (FM) (Lipman et al., 2022; Liu et al.,
+071     2022; Chen & Lipman, 2024) frames the sampling process as the integration of a learned time-
+072     dependent vector field. Early work (Song & Ermon, 2020; Song et al., 2021) in score-based SDEs
+073    and their corresponding probability-flow ODEs enabled deterministic sampling and efficient likeli-
+074    hood evaluation. FM further refines this by training continuous normalizing flows (Chen et al., 2018)
+075     through conditional vector field regression along optimized probability paths, such as those (e.g.
+076    Lipman et al., 2022; Tong et al., 2023; Lipman et al., 2024; Schusterbauer et al., 2025; Wang et al.,
+077     2025) derived from diffusion or optimal transport, improving stability and speed with standard ODE
+         solvers.078
+079    The choice of numerical integrator is crucial. First-order methods, such as Euler and DDIM (Song
+080      et al., 2020), are computationally inexpensive but require a large number of steps to achieve high-
+081     quality results. To mitigate this problem, second-order solvers, such as Heun’s method, are fre-
+        quently employed (Karras et al., 2022). For the most demanding tasks, higher-order solvers tai-082
+         lored specifically for diffusion models, such as the DPM-Solver family (Lu et al., 2022a;b; Zheng
+083
+          et al., 2023) and Bespoke Solvers (Shaul et al., 2023; 2024), offer improved sample quality with
+084
+        lower NFEs. Furthermore, methods like S4S (Frankel et al., 2025), AYS (Sabour et al., 2024) and
+085   DMN (Xue et al., 2024) have demonstrated potential for reducing discretization and global error.
+086     However, these methods still require strictly sequential execution, limiting opportunities for paral-
+087      lelization.
+088
+        Parallel Sampling.  ParaDiGMS (Shih et al., 2024) accelerates sampling by leveraging paral-
+089      lelized Picard iterations to simultaneously predict and iteratively refine future denoising steps.
+090    ParaTAA (Tang et al., 2024) reformulates the autoregressive diffusion sampling process as TNEs
+091    and uses fixed-point methods to solve multiple steps in parallel. ParaSolver (Lu et al., 2025) fur-
+092      ther models the sampling process as a system of banded nonlinear equations, and shows how to
+093     exploit structural properties and hierarchical initialization to preserve sample quality while greatly
+094     reducing inference time. Our proposed method, ParaFlow, builds on the parallel solving framework
+095     pioneered by those works, but is the first to (i) systematically formulate parallel sampling in the
+096     context of Flow Matching (FM) models; (ii) provide accompanying theoretical guarantees specific
+097      to FM-based parallel solving; and (iii) empirically validate that TNE-based parallel sampling works
+         for state-of-the-art FM models without degradation in sample fidelity.098
+099
+100    3  PRELIMINARY: FLOW MATCHING MODELS
+101
+102    Flow Matching models aim to learn a continuous-time process that transports a simple prior distri-
+103     bution p0 (e.g., Np0, Iq) into a complex target data distribution p1. This transformation is described
+104    by a time-dependent vector field vt  : Rd ˆ r0, 1s Ñ Rd, parameterized by a neural network with
+105     parameters θ. For a sample trajectory xt, t P r0, 1s, the dynamics are governed by the ODE:
+106
+107                                   dxt
+                         “ vtpxt, θq,  x0 „ p0.                                 (1)
+                                         dt
+
+
+                                              2
+
+=== PDF PAGE 3 ===
+       Under review as a conference paper at ICLR 2026
+
+
+
+
+
+108
+       The vector field vt is learned by optimizing its underlying neural network parameters, such that the
+109      distribution of the terminal state x1 approximates the target distribution p1 when x0 „ p0.
+110
+       Sampling Process. To generate new samples, one first draws an initial point x0 „ p0 and then111
+         integrates the ODE in Eq. (1) from t “ 0 to t “ 1.  In practice, this integration is carried out
+112
+        numerically. A common approach is the first-order Euler method: given a discretization 0 “ t0 ă
+113      t1 ă ¨ ¨ ¨ ă tN “ 1, the update rule is
+114
+115
+                            xti`1 “ xti ` pti`1 ´ tiq ¨ vpxti, ti, θq,   i “ 0, . . . , N ´ 1.                 (2)116
+117     This discretization produces a sequence of intermediate states xti. Since each update depends on the
+118      result of the previous step, the sampling procedure is inherently sequential, requiring N successive
+119     evaluations of the neural network.
+120
+121    4  PROPOSED METHOD: PARAFLOW
+122
+123     4.1  MOTIVATION
+124
+       The autoregressive update in Eq. (2) constitutes the main bottleneck: each step depends on the
+125
+        previous one, precluding parallel computation and limiting sampling efficiency. We formalize this
+126
+       dependency as follows.
+127
+        Definition 1 (Autoregressive Sampling Procedure). Initiating with a sample xt0 „ p0, the sampling128
+        process for an FM model using a numerical ODE solver is an autoregressive procedure of the form:
+129
+130                                      i´1ÿ
+131                              xti “ xt0 `    hj ¨ vjpxtj, tj, θq,   i P t1, . . . , Nu,                     (3)
+132                                    j“0
+133    where hj “ tj`1 ´ tj is the step size and vj is the vector field evaluated at time tj.
+134
+135     This  formulation  highlights  the  stepwise  dependency.    Viewing  the  entire  trajectory
+136     txt0, xt1, . . . , xtN u as unknown variables, this autoregressive process can be cast as a system of
+137   N`1 equations. Solving this system yields the full trajectory simultaneously, eliminating sequen-
+           tial dependencies and enabling parallel computation.
+138
+
+139
+        4.2  RECASTING AUTOREGRESSIVE SAMPLING AS TRIANGULAR NONLINEAR EQUATION
+140
+           SOLVING
+141
+142   We can view the sequence of updates in Definition 1 as a system of TNEs. Let tˆxt0, . . . , ˆxtN u be
+143     the unknown variables corresponding to the true sampling trajectory txt0, . . . , xtN u.
+144     Definition 2 (TNEs for Flow Matching Sampling). We define the system of TNEs for the autoregres-
+145      sive sampling procedure as:
+146                                           "ˆxt0 ´ xt0 “ 0,
+                                                                                                            (4)147                 Fpˆxt0, . . . , ˆxtN q “
+148                                                       ˆxti ´ Fi´1pˆxt0, . . . , ˆxti´1q “ 0,   i P t1, . . . , Nu,
+149    where xt0 is the initial sample from the prior and Fi´1 is defined based on the ODE solver:
+150
+                                                           i´1ÿ
+151
+                                 Fi´1pˆxt0, . . . , ˆxti´1q “ ˆxt0 `    hj ¨ vpˆxtj, tj, θq.                      (5)152
+                                                       j“0
+153
+154     This reformulation decouples the stepwise dependencies: given tentative states tˆxtju, the vector field
+155      vpˆxtj, tj, θq can be evaluated for all timesteps j P t0, . . . , N ´ 1u in parallel. A crucial question
+156     then arises: does solving this system recover the same trajectory as the original sequential process?
+157
+        Proposition 1 (Trajectory Equivalence [see App. B for proof]). The TNE system in Eq. (4) possesses
+158    a unique root that is identical to the sampling trajectory txtiuNi“0 generated by the autoregressive
+159     procedure in Eq. (3).
+160
+161     This proposition ensures that by solving the TNEs, we can produce a sample indistinguishable in
+         quality from that obtained via the standard autoregressive process.
+
+
+                                              3
+
+=== PDF PAGE 4 ===
+       Under review as a conference paper at ICLR 2026
+
+
+
+
+
+162
+       Algorithm 1: ParaFlow: Parallel Sampling within a Sliding Window
+163
+164     Input   : Initial noise xt0, total steps N, timesteps ttiuNi“0, tolerance δ, window size p.
+165     Output : Final sample ˆxpKqtN  .
+166     1  Initialize tˆxp0qti “ xt0, i “ 0, . . . , p ´ 1u.
+167     2  i Ð 0, k Ð 0;
+168     3 while i ă N do
+169     4    Compute vector field vpkqj “ vpˆxpkqti`j, ti`j, θq in parallel for j P t0, . . . , p ´ 1u.
+                                   řj
+170     5     Update temporary states Fj Ð ˆxpkqti `   l“0pti`l`1 ´ ti`lqvpkql   in parallel for j P t0, . . . , p ´ 1u.
+171     6     Update the state ˆxpk`1qti`j`1 Ð Fj in parallel for j P t0, . . . , p ´ 1u.
+172     7      stride Ð number of converged states based on D1 }ˆxpk`1qti`j`1 ´ ˆxpkqti`j`1}2 ď δ2 for j P t0, . . . , p ´ 1u.
+173
+         8      Initialize new states outside current window: ˆxpk`1qti`p`j Ð ˆxpk`1qti`p  for j P t1, . . . , strideu.174
+         9      i Ð i ` stride,  k Ð k ` 1,  p Ð minpp, N ´ iq.
+175
+176    10 Return: ˆxpKqtN
+177
+178
+179     4.3  SOLVING THE TNE SYSTEM WITH FIXED-POINT ITERATION
+180
+181   We can solve the system in Eq. (4) using various root-finding methods. Standard fixed-point iteration
+182     (FPI) is a natural choice. Given an initial guess for the entire trajectory tˆxp0qti uNi“0, the update rule is:
+183
+184                               ˆxpk`1qti  “ Fi´1pˆxpkqt0  , . . . , ˆxpkqti´1q,   i P t1, . . . , Nu,                      (6)
+185
+186     with ˆxpk`1qt0  “ xt0 for all k. Crucially, this update is step-level parallelizable: for any iteration k, the
+187
+        vector field evaluations vpˆxpkqtj  , tj, θq across all j P t0, . . . , N ´1u can be computed simultaneously.188
+189     Proposition 2 (Convergence Guarantee [see App. C for proof]). Starting from any initial guess
+190      tˆxp0qti uNi“0, the fixed-point iteration in Eq. (6) converges exactly to the autoregressive sampling tra-
+191     jectory txtiuNi“0. This convergence is achieved in at most N iterations.
+192
+193    The proof follows from the structure of the update mapping, which admits the autoregressive trajec-
+         tory as its unique fixed point. In practice, the number of parallel iterations K required for conver-194
+        gence is typically much smaller than N, resulting in substantial acceleration.
+195
+196
+        4.4  EFFICIENT IMPLEMENTATION WITH A SLIDING WINDOW
+197
+198     Solving for the entire trajectory of N steps in parallel can be computationally demanding. To make
+199      this practical, we implement the FPI within a sliding window of size p ! N. We perform parallel
+200      iterations only on p subequations at a time. The window slides forward once the states within it have
+201     converged.
+202         Initialization. We initialize all states within the first window to the starting noise vector: ˆxp0qti “ xt0
+203      for i “ 0, . . . , p ´ 1. When the window slides, new states entering the window are initialized with
+204     the last converged state from the previous window.
+205
+       Stopping Criterion.  We define convergence within the window using a tolerance threshold
+206
+          δ. An iterate ˆxpkqti   is considered converged if the change from the previous iteration is small:207
+208      D}ˆxpkq1    ti ´ ˆxpk´1qti    }2 ď δ2, where D is the number of pixels. The window slides forward by a stride,
+209    which is the number of contiguously converged states from the beginning of the window.
+
+210
+211    5  EXPERIMENT
+212
+213    Experimental setup.  All experiments were carried out on 8 Ascend 910B GPUs. We eval-
+214     uated generation quality using the Fr´echet Inception Distance (FID) (Heusel et al., 2017) and
+215    CLIP score (Hessel et al., 2021), calculated over 10,000 random prompts from the FluxPrompt-
+        ing dataset (VincentGOURBIN, 2024). We report the average wall-clock time to generate a single
+
+
+                                              4
+
+=== PDF PAGE 5 ===
+       Under review as a conference paper at ICLR 2026
+
+
+
+
+
+216
+                                                            Stable Diffusion 3
+217            Steps     Method
+218                                           ItersÓ  NFEÓ  CLIPÒ  FIDÓ  Time (s)Ó  SpeedupÒ
+219
+220                         Euler       100.00  100.00  32.38  50.75  18.22        1.0ˆ              100
+221                   Euler + ParaFlow  26.47  211.78  32.37  51.62  5.55         3.3ˆ
+222                         Euler        75.00   75.00   32.37  51.14  13.57        1.0ˆ
+223            75
+                      Euler + ParaFlow  22.96  183.66  32.37  51.91  4.95         2.7ˆ
+224
+225                         Euler        50.00   50.00   32.37  51.57  9.37         1.0ˆ
+              50
+226                   Euler + ParaFlow  19.94  159.49  32.36  51.95  4.43         2.1ˆ
+227
+                            Euler        25.00   25.00   32.31  53.34  5.17         1.0ˆ
+228            25
+                      Euler + ParaFlow  16.02  128.12  32.32  54.00  3.73         1.4ˆ229
+
+230
+231     Table 1: Quantitative comparisons of different methods on Stable Diffusion 3 over 10, 000 random
+        samples at 1024 ˆ 1024. The visual comparisons are shown in the Appendix. The best results in232
+        each step are highlighted in bold. “Ò” (resp. “Ó”) means the larger (resp. smaller), the better. Note233
+         that Euler + ParaFlow is evaluated with tolerance 0.005.
+234
+
+235
+236
+        image. Our baseline is the standard sequential Euler solver. We compare it with our proposed Euler237
+      + ParaFlow method across different total sampling steps (N P t100, 75, 50, 25u). For ParaFlow, we
+238
+        use a default parallel window size of p “ 8.
+239
+240   We define the total steps (N) as the number of discrete steps in the sampling schedule. For a standard
+         sequential method such as the Euler solver, the number of iterations (Iters) and the total number of241
+        function evaluations (NFE) are identical to N. For our parallel method, ParaFlow, Iters signifies
+242
+         the reduced number of sequential blocks executed, while the total computational workload, NFE,
+243
+          reflects the parallel execution and is calculated as Iters ˆ p, where p is the parallel window size.
+244
+245
+246     5.1  RESULTS ON STABLE DIFFUSION 3
+
+247
+     We first evaluate ParaFlow on Stable Diffusion 3, generating 1024 ˆ 1024 images from 10,000
+248
+       random prompts.
+249
+250
+       Performance across different step counts.  Table 1 compares the results of the vanilla Euler251
+         solver and Euler + ParaFlow under different numbers of sampling steps. Our method demonstrates
+252
+        a significant reduction in latency by parallelizing the computation. For example, in the 100-step set-
+253
+          ting, ParaFlow reduces the number of sequential iterations from 100 to just 26.47, translating into a
+254    3.3ˆ reduction in wall clock time (from 18.22 to 5.55 s), while incurring only a marginal increase in
+255    FID (50.75 to 51.62) and maintaining an identical CLIP score.The corresponding qualitative results
+256     are shown in Figure 1, further confirming the visual fidelity of our method.
+257
+        This highlights the core trade-off of ParaFlow: we exchange a higher total computational cost (NFE
+258    from 100.00 to 211.78) for a substantial decrease in generation latency. This advantage holds even at
+259     fewer sampling steps, where ParaFlow delivers a 1.4ˆ speedup in the 25-step setting, underscoring
+260       its robustness.
+261
+262
+        Effect of tolerance.  To further investigate the trade-off between speed and fidelity, we vary
+263     ParaFlow’s tolerance parameter at 25 total steps (Table 2).  Increasing the tolerance (e.g., 0.01)
+264     reduces the average number of iterations to 12.16, resulting in a 1.7ˆ acceleration, at the cost of
+265     a modest increase in FID (55.59). Conversely, employing a stricter tolerance (e.g., 0.005) yields a
+266    FID of 54.00, closely aligning with the baseline Euler method (53.34), while still achieving a 1.4ˆ
+267     speedup. This tunable parameter enables practitioners to adapt ParaFlow to task-specific require-
+268     ments, providing a controllable trade-off between sample quality and inference efficiency. Repre-
+269      sentative visual comparisons are provided in Figure 2, which clearly illustrate the perceptual impact
+        of different tolerance settings.
+
+
+                                              5
+
+=== PDF PAGE 6 ===
+       Under review as a conference paper at ICLR 2026
+
+
+
+
+
+270
+271
+
+272
+273
+274
+275
+276
+277
+
+278
+279
+280
+281
+282
+           (a) iter = 0     (b) iter = 4     (c) iter = 8    (d) iter = 12    (e) iter = 16     (f) iter = 20283
+
+284
+        Figure 1: All images are generated by the stable-diffusion-3-medium model with 50 sampling
+285      steps, using the prompt “Create a dreamlike landscape featuring rolling hills, shimmering water-
+286       falls, and towering mountains made entirely of crystal and gemstones that refract light into rain-
+287     bows.” at resolution 1024 ˆ 1024. The top row corresponds to the Euler method, while the bottom
+288    row corresponds to our proposed Euler + ParaFlow method (tolerance “ 0.005).
+289
+290
+291                                                           Stable Diffusion 3                Method      Tolerance
+292                                              ItersÓ  NFEÓ  CLIPÒ  FIDÓ  Time (s)Ó  SpeedupÒ
+293
+294                 Euler          0      25.00  25.00   32.31  53.34  5.17        1.0ˆ
+295                               0.01    12.16  97.32   32.31  55.59  3.08        1.7ˆ
+296           Euler + ParaFlow    0.007    13.96  111.72  32.31  54.63  3.38        1.5ˆ
+297
+                                 0.005    16.02  128.12  32.32  54.00  3.73        1.4ˆ
+298
+299
+        Table 2: Quantitative comparisons on Stable Diffusion 3 with 25 sampling steps over 10, 000 random
+300
+        samples at 1024 ˆ 1024. The best results are highlighted in bold. “Ò” (resp. “Ó”) means the larger
+301
+         (resp. smaller), the better.
+302
+303
+304
+305
+306
+
+307
+308
+309
+310
+311
+
+312
+                (a) standard     (b) tolerance = 0.005 (c) tolerance = 0.007 (d) tolerance = 0.01313
+314
+        Figure 2: The above images show results from the stable-diffusion-3-medium model at resolution
+315    1024ˆ1024 with 25 sampling steps. The prompt used is “Abandoned church in night”. The leftmost
+316    image corresponds to the Euler method, while the other three images correspond to our proposed
+317     Euler + ParaFlow method with parallel window size “ 8 under different tolerance values (0.005,
+318     0.007, 0.01).
+319
+320
+321     5.2  RESULTS ON FLUX
+322
+323   We further validate ParaFlow on the Flux model, examining its performance across various sampling
+         steps, resolutions, and window sizes.
+
+
+                                              6
+
+=== PDF PAGE 7 ===
+       Under review as a conference paper at ICLR 2026
+
+
+
+
+
+324
+                                                         Flux Model
+325            Steps     Method
+326                                           ItersÓ  NFEÓ  CLIPÒ  FIDÓ  Time (s)Ó  SpeedupÒ
+327
+328                         Euler       100.00  100.00  32.31  55.62  87.94        1.0ˆ              100
+329                   Euler + ParaFlow  23.49  187.95  32.40  55.28  22.16        4.0ˆ
+330                         Euler        75.00   75.00   32.36  55.25  66.15        1.0ˆ
+331            75
+                      Euler + ParaFlow  19.32  154.54  32.42  55.35  18.38        3.6ˆ
+332
+333                         Euler        50.00   50.00   32.38  54.89  44.38        1.0ˆ
+              50
+334                   Euler + ParaFlow  15.11  120.86  32.45  55.84  14.57        3.0ˆ
+335
+                            Euler        25.00   25.00   32.40  55.23  22.60        1.0ˆ
+336            25
+                      Euler + ParaFlow  12.79  102.33  32.47  55.88  12.42        1.8ˆ337
+
+338
+339     Table 3: Quantitative comparisons of different methods on Flux over 10, 000 random samples at
+       1024 ˆ 1024. The visual comparisons are shown in the Appendix. The best results in each step are340
+        highlighted in bold. “Ò” (resp. “Ó”) means the larger (resp. smaller), the better. Note that Euler +341
+       ParaFlow is evaluated with tolerance 0.01.
+342
+
+343
+344
+345
+346
+347
+348
+
+349
+350
+351
+352
+353
+354
+
+355
+356
+           (a) iter = 0     (b) iter = 3     (c) iter = 6     (d) iter = 9    (e) iter = 12     (f) iter = 14
+357
+358     Figure 3: All images are generated by the FLUX.1-dev model with 50 sampling steps, using the
+359    prompt “A peaceful mountain village surrounded by rolling hills and a sparkling lake in the fore-
+360     ground, with fishermen casting their lines into the calm waters.” at resolution 1024ˆ1024. The top
+361    row corresponds to the Euler method, while the bottom row corresponds to our proposed Euler +
+362    ParaFlow method (parallel window size “ 8, tolerance “ 0.01).
+363
+364
+365    Performance across different steps.  As shown in Table 3, ParaFlow delivers even greater ac-
+366     celeration on Flux.  At 100 steps,  it reduces the required iterations to 23.49, yielding a 4.0ˆ
+367     speedup (87.94 vs. 22.16 s) while slightly improving the FID score. The acceleration remains con-
+368      sistent across step counts, reaching 1.8ˆ even at 25 steps, confirming ParaFlow’s effectiveness as
+369     a general-purpose accelerator. Figure 3 further corroborates these findings with qualitative exam-
+370      ples, highlighting that the perceptual quality is well preserved despite the substantial reduction in
+        computation.371
+
+372
+373     Effect of resolution.  Table 4 demonstrates ParaFlow’s scalability across different image resolu-
+374      tions with a 25-step schedule. Our method delivers consistent speedups: 2.3ˆ at 512 ˆ 512, 1.8ˆ at
+375    1024ˆ1024, and 1.7ˆ at 2048ˆ2048. Crucially, the impact on FID and CLIP scores remains min-
+376     imal across all resolutions, proving that ParaFlow’s benefits generalize effectively to both low- and
+377     high-resolution synthesis. Complementary visual results are provided in Figure 4, which illustrate
+         that image fidelity is preserved across scales while the generation time is substantially reduced.
+
+
+                                              7
+
+=== PDF PAGE 8 ===
+       Under review as a conference paper at ICLR 2026
+
+
+
+
+
+378
+                                                            Flux Model
+379          Resolution      Method
+380                                              ItersÓ  NFEÓ  CLIPÒ  FIDÓ   Time (s)Ó   SpeedupÒ
+381
+382                            Euler       25.00  25.00   32.19  52.49  11.31         1.0ˆ           512ˆ512
+383                      Euler + ParaFlow  13.24  105.90  32.23  52.59  4.81          2.3ˆ
+384                            Euler       25.00  25.00   32.40  55.23  22.60         1.0ˆ
+385       1024ˆ1024
+                         Euler + ParaFlow  12.79  102.33  32.47  55.88  12.42         1.8ˆ
+386
+387                            Euler       25.00  25.00   31.34  55.98  109.55        1.0ˆ
+          2048ˆ2048
+388                      Euler + ParaFlow  14.30  114.37  31.31  56.46  65.86         1.7ˆ
+389
+390     Table 4: Quantitative comparisons of Euler and Euler + ParaFlow on the Flux model over 10, 000
+391    random samples at 25 sampling steps. The best results in each resolution are highlighted in bold for
+392      Iters, Time, and Speedup only. “Ò” (resp. “Ó”) means the larger (resp. smaller), the better. Note that
+393     Euler + ParaFlow is evaluated with tolerance 0.01 for 512 ˆ 512 and 1024 ˆ 1024, and 0.0028 for
+394    2048 ˆ 2048.
+395
+396
+
+397
+398
+399
+400
+401
+402              (a) 512 ˆ 512                (b) 1024 ˆ 1024               (c) 2048 ˆ 2048
+403
+404     Figure 4: All images are generated by the FLUX.1-dev model with 25 sampling steps. The prompts
+405     used are: “Skier gliding over fresh powder” at resolution 512 ˆ 512, “A photographer focusing
+406    on the subject of a portrait, using natural light and composition to capture the perfect shot.”  at
+         resolution 1024 ˆ 1024, and “A charming farmhouse exterior with a white picket fence, a covered407
+        porch, and a garden full of colorful flowers and herbs.” at resolution 2048 ˆ 2048. In each group,408
+         the left image corresponds to the Euler method, while the right image corresponds to our proposed
+409
+       Euler + ParaFlow method (parallel window size “ 8, tolerance “ 0.01, 0.01, and 0.0028 for the
+410     three resolutions, respectively).
+411
+412
+413     Effect of window size (p).  We further analyze the influence of window size p on ParaFlow, using
+414     a 50-step schedule at 512 ˆ 512 resolution (Table 5). The results reveal a clear trade-off: a smaller
+415    window size leads to a lower NFE and faster wall-clock time, at the cost of slightly more iterations.
+416    The window size of p “ 8 provides the best balance, achieving a 4.3ˆ speedup with almost identical
+417    image quality to the standard Euler solver. This flexibility allows practitioners to optimize ParaFlow
+418      for their specific hardware configurations. Figure 5 visually demonstrates this effect, showing that
+         increasing the window size preserves fidelity while offering varying levels of acceleration.419
+
+420
+        5.3  ADDITIONAL QUALITATIVE EVALUATION
+421
+422   We also provide qualitative results in Appendix D, illustrating the images generated by ParaFlow on
+423     both Stable Diffusion 3 and Flux. The samples demonstrate that ParaFlow preserves high percep-
+424      tual quality and semantic alignment while significantly reducing sampling time. Together with the
+425      quantitative analyses, these results confirm ParaFlow as a general and effective solution for fast and
+426      high-fidelity diffusion sampling.
+427
+428    6  LIMITATION AND DISCUSSION
+429
+430    While ParaFlow achieves significant speedups, its effectiveness is predicated on the availability of
+431      parallel computing resources. The fundamental trade-off is exchanging increased computational
+        throughput (evaluating p steps in parallel) for reduced latency. This approach also increases the
+
+
+                                              8
+
+=== PDF PAGE 9 ===
+       Under review as a conference paper at ICLR 2026
+
+
+
+
+
+432
+                                                             Flux Model
+433           Method     Window Size
+434                                               ItersÓ  NFEÓ  CLIPÒ  FIDÓ  Time (s)Ó  SpeedupÒ
+435
+436               Euler           1       50.00  50.00   32.13  52.66  23.80        1.0ˆ
+437                            32       14.76  472.44  32.17  52.64  15.12        1.6ˆ
+438                            24       14.75  354.02  32.17  52.64  12.21        1.9ˆ
+439         Euler + ParaFlow
+                              16       14.83  237.27  32.17  52.66  9.18         2.6ˆ
+440
+                               8       15.44  123.51  32.16  52.58  5.58         4.3ˆ
+441
+442
+        Table 5: Quantitative comparisons of different window sizes for the FLUX model over 10, 000
+443
+       random samples at 512 ˆ 512 with 50 sampling steps. The visual comparisons are shown in the
+444
+        Appendix. The best results are highlighted in bold. “Ò” (resp. “Ó”) means the larger (resp. smaller),
+445     the better. Note that Euler + ParaFlow is evaluated with tolerance 0.01.
+446
+447
+448
+449
+450
+
+451
+452
+453
+454
+455        (a) standard       (b) size = 8       (c) size = 16      (d) size = 24      (e) size = 32
+456
+457     Figure 5: The above images show results from the FLUX.1-dev model at resolution 512 ˆ 512 with
+458    25 sampling steps. The prompt used is “Library with lots of books on the floor”. The leftmost image
+        corresponds to the Euler method, while the other four images correspond to our proposed Euler +459
+       ParaFlow method under different parallel window sizes (8, 16, 24, 32) with tolerance fixed at 0.01.
+460
+461
+462    memory footprint, since intermediate states within the parallel window must be stored. Our current
+463     implementation is not fully system-level optimized; techniques like kernel fusion and optimized
+464     communication collectives could further reduce overhead and amplify the speedup. Looking for-
+465     ward, we anticipate that ParaFlow’s efficiency will scale with hardware advancements, particularly
+466     with faster inter-GPU communication and larger on-chip memory. This positions parallelized sam-
+467     pling as a promising direction for future large-scale generative models.
+468
+469    7  CONCLUSION
+470
+471     This paper introduces ParaFlow, a novel framework that reimagines the sampling process for Flow
+472     Matching models. By reformulating the inherently autoregressive ODE solving process as a system
+473     of triangular nonlinear equations, ParaFlow enables full step-level parallelism, allowing multiple
+474     sampling steps to be computed simultaneously. Our theoretical analysis confirms that this method
+475     converges to the exact trajectory of a standard sequential sampler. Empirically, on state-of-the-art
+       models like Stable Diffusion 3 and Flux, ParaFlow delivers wall-clock speedups of up to 4.3ˆ with476
+         negligible impact on generation quality. This work opens a new avenue for accelerating genera-
+477
+          tive model inference, complementing existing methods and paving the way for more efficient and
+478
+         interactive creative applications.
+479
+
+480
+481
+482
+483
+484
+485
+
+
+
+                                              9
+
+=== PDF PAGE 10 ===
+       Under review as a conference paper at ICLR 2026
+
+
+
+486   ETHICS & REPRODUCIBILITY STATEMENTS
+487
+       Our work focuses on a fundamental algorithmic improvement for sampling from generative models488
+       and does not introduce new ethical concerns beyond those already associated with large-scale text-
+489
+        to-image models. The models used in our experiments (Stable Diffusion 3, Flux) are developed
+490
+       by third parties, and we use them as is. Our method could be used to accelerate the generation of
+491     harmful content, but it does not inherently make such generation easier or more likely than with
+492     standard samplers. We believe the primary positive impact is making high-fidelity generative AI
+493    more accessible for research and creative applications by lowering the inference time barrier. For
+494      reproducibility, we have detailed our methodology, algorithm, and experimental setup in the paper.
+495   We will release our source code, built upon standard open-source libraries, upon publication to allow
+496      for full verification of our results.
+497
+498   REFERENCES
+499
+500     Black  Forest  Labs.     Introducing  flux.1.    https://www.blackforestlabs.ai/
+        announcements/introducing-flux, August 2024. Accessed: 2025-09-07.501
+502     Ricky T. Q. Chen and Yaron Lipman. Flow matching on general geometries. In The Twelfth Interna-
+503        tional Conference on Learning Representations, 2024. URL https://openreview.net/
+504     forum?id=g7ohDlTITL.
+505
+506     Ricky TQ Chen, Yulia Rubanova, Jesse Bettencourt, and David K Duvenaud.  Neural ordinary
+507         differential equations. Advances in neural information processing systems, 31, 2018.
+508     Patrick Esser, Sumith Kulal, Andreas Blattmann, Rahim Entezari, Jonas M¨uller, Harry Saini, Yam
+509        Levi, Dominik Lorenz, Axel Sauer, Frederic Boesel, et al.  Scaling rectified flow transformers
+510        for high-resolution image synthesis. In Forty-first international conference on machine learning,
+511       2024.
+512
+513     Eric Frankel, Sitan Chen, Jerry Li, Pang Wei Koh, Lillian J. Ratliff, and Sewoong Oh. S4s: Solving
+            for a fast diffusion model solver. In Forty-second International Conference on Machine Learning,514
+          2025. URL https://openreview.net/forum?id=9OaZCNbV2w.
+515
+516     Jack Hessel, Ari Holtzman, Maxwell Forbes, Ronan Le Bras, and Yejin Choi.  Clipscore: A
+517        reference-free evaluation metric for image captioning. arXiv preprint arXiv:2104.08718, 2021.
+518
+519     Martin Heusel, Hubert Ramsauer, Thomas Unterthiner, Bernhard Nessler, and Sepp Hochreiter.
+520      Gans trained by a two time-scale update rule converge to a local nash equilibrium. Advances in
+          neural information processing systems, 30, 2017.521
+522     Tero Karras, Miika Aittala, Timo Aila, and Samuli Laine. Elucidating the design space of diffusion-
+523       based generative models. In NeurIPS, 2022.
+524
+525     Yaron Lipman, Ricky TQ Chen, Heli Ben-Hamu, Maximilian Nickel, and Matthew Le. Flow match-
+526       ing for generative modeling. In The Eleventh International Conference on Learning Representa-
+527         tions, 2022.
+
+528
+       Yaron Lipman, Marton Havasi, Peter Holderrieth, Neta Shaul, Matt Le, Brian Karrer, Ricky T. Q.
+529       Chen, David Lopez-Paz, Heli Ben-Hamu, and Itai Gat. Flow matching guide and code, 2024.
+530     URL https://arxiv.org/abs/2412.06264.
+531
+532    Xingchao Liu, Chengyue Gong, et al. Flow straight and fast: Learning to generate and transfer data
+533       with rectified flow. In The Eleventh International Conference on Learning Representations, 2022.
+
+534
+       Cheng Lu, Yuhao Zhou, Fan Bao, Jianfei Chen, Chongxuan Li, and Jun Zhu. Dpm-solver: A fast
+535       ode solver for diffusion probabilistic model sampling in around 10 steps. Advances in Neural
+536       Information Processing Systems, 35:5775–5787, 2022a.
+537
+538    Cheng Lu, Yuhao Zhou, Fan Bao, Jianfei Chen, Chongxuan Li, and Jun Zhu. Dpm-solver++: Fast
+539        solver for guided sampling of diffusion probabilistic models. In arXiv preprint arXiv:2211.01095,
+          2022b.
+
+
+                                              10
+
+=== PDF PAGE 11 ===
+       Under review as a conference paper at ICLR 2026
+
+
+
+
+
+540
+        Jianrong Lu, Zhiyu Zhu, and Junhui Hou.  Parasolver: A hierarchical parallel integral solver for
+541        diffusion models. In International Conference on Learning Representations, 2025.
+542
+543     Simian Luo, Yiqin Tan, Longbo Huang, Jian Li, and Hang Zhao. Latent consistency models: Synthe-
+544        sizing high-resolution images with few-step inference. arXiv preprint arXiv:2310.04378, 2023.
+545
+       Amirmojtaba Sabour, Sanja Fidler, and Karsten Kreis.  Align your steps: Optimizing sampling
+546       schedules in diffusion models, 2024. URL https://arxiv.org/abs/2404.14507.
+547
+548    Tim Salimans and Jonathan Ho. Progressive distillation for fast sampling of diffusion models. In
+549        International Conference on Learning Representations, 2022.
+550
+        Johannes Schusterbauer, Ming Gui, Frank Fundel, and Bj¨orn Ommer.  Diff2flow: Training flow
+551       matching models via diffusion model alignment.  In Proceedings of the Computer Vision and
+552        Pattern Recognition Conference, pp. 28347–28357, 2025.
+553
+554     Neta Shaul, Juan Perez, Ricky T. Q. Chen, Ali Thabet, Albert Pumarola, and Yaron Lipman. Bespoke
+555        solvers for generative flow models, 2023. URL https://arxiv.org/abs/2310.19075.
+556     Neta Shaul, Uriel Singer, Ricky T. Q. Chen, Matthew Le, Ali Thabet, Albert Pumarola, and Yaron
+557       Lipman. Bespoke non-stationary solvers for fast sampling of diffusion and flow models, 2024.
+558     URL https://arxiv.org/abs/2403.01329.
+559
+560    Andy Shih, Suneel Belkhale, Stefano Ermon, Dorsa Sadigh, and Nima Anari. Parallel sampling of
+           diffusion models. Advances in Neural Information Processing Systems, 36, 2024.561
+562     Jiaming Song, Chenlin Meng, and Stefano Ermon. Denoising diffusion implicit models. In Interna-
+563        tional Conference on Learning Representations, 2020.
+564
+565    Yang Song and Stefano Ermon. Generative modeling by estimating gradients of the data distribution,
+          2020. URL https://arxiv.org/abs/1907.05600.566
+567    Yang Song, Jascha Sohl-Dickstein, Diederik P. Kingma, Abhishek Kumar, Stefano Ermon, and Ben
+568        Poole.  Score-based generative modeling through stochastic differential equations.  In Interna-
+569        tional Conference on Learning Representations, 2021.
+570
+       Yang Song, Prafulla Dhariwal, Mark Chen, and Ilya Sutskever. Consistency models. International571
+          Conference on Machine Learning, 2023.
+572
+573     Zhiwei Tang, Jiasheng Tang, Hao Luo, Fan Wang, and Tsung-Hui Chang.  Accelerating parallel
+574       sampling of diffusion models. In Forty-first International Conference on Machine Learning, 2024.
+575
+        Alexander Tong, Kilian Fatras, Nikolay Malkin, Guillaume Huguet, Yanlei Zhang, Jarrid Rector-576
+          Brooks, Guy Wolf, and Yoshua Bengio. Improving and generalizing flow-based generative models
+577
+          with minibatch optimal transport. arXiv preprint arXiv:2302.00482, 2023.
+578
+579    VincentGOURBIN.       Fluxprompting.     https://huggingface.co/datasets/
+580     VincentGOURBIN/FluxPrompting, 2024.
+581
+        Shuai Wang, Zexian Li, Tianhui Song, Xubin Li, Tiezheng Ge, Bo Zheng, Limin Wang, et al.
+582
+           Differentiable solver search for fast diffusion sampling. arXiv preprint arXiv:2505.21114, 2025.
+583
+584    Shuchen Xue, Zhaoqiang Liu, Fei Chen, Shifeng Zhang, Tianyang Hu, Enze Xie, and Zhenguo
+585        Li. Accelerating diffusion sampling with optimized time steps, 2024. URL https://arxiv.
+586     org/abs/2402.17376.
+587
+       Kaiwen Zheng, Cheng Lu, Jianfei Chen, and Jun Zhu.  Dpm-solver-v3: Improved diffusion ode
+588
+           solver with empirical model statistics. In NeurIPS, 2023.
+589
+590
+591
+592
+593
+
+
+
+                                              11
+
+=== PDF PAGE 12 ===
+       Under review as a conference paper at ICLR 2026
+
+
+
+594   A  USE OF LLM
+595
+596     During the preparation of this work, we used Large Language Models (LLMs) to assist with the
+597     writing process. The primary uses included polishing and improving the fluency of the text, gener-
+598     ating preliminary drafts of proofs, and assisting in the creation and formatting of tables. After using
+599     these tools, the author(s) reviewed and edited the content extensively. We take full responsibility
+600      for the entire content of this publication, including the ideas, proofs, and presentations ultimately
+601     contained in the final manuscript.
+
+602
+603   B  PROOF OF PROPOSITION 1
+604
+605   We first show that the triangular nonlinear equation (TNE) system in Eq. (4) has a unique root.
+       Suppose there exist two distinct solutions tA0, ¨ ¨ ¨ , ANu and tB0, ¨ ¨ ¨ , BNu. By construction, for606
+       any i P t1, . . . , Nu these solutions satisfy:
+607
+608                           "Ai “ Fi´1pA0, ¨ ¨ ¨ , Ai´1q
+                                                                                                            (7)
+609                               Bi “ Fi´1pB0, ¨ ¨ ¨ , Bi´1q.
+610
+      By induction, assume Aj “ Bj for all 0 ď j ď i ´ 1. Then,
+611
+612                    Ai “ Fi´1pA0, ¨ ¨ ¨ , Ai´1q “ Fi´1pB0, ¨ ¨ ¨ , Bi´1q “ Bi,                  (8)
+613    which implies Ai “ Bi. Therefore, all components of the two solutions must coincide, and the root
+614      is unique.
+615     Next, we show that this unique root coincides with the autoregressive trajectory. From Eq. (3), the
+616     autoregressive update satisfies
+617                                                i´1ÿ
+618                                         xti “ xt0 `    hjvpxtj, tj, θq.                                (9)
+619                                             j“0
+620     Meanwhile, the definition of Fi´1 in Eq. (5) gives
+621                                                            i´1ÿ
+622                                      ˆxti “ Fi´1pˆxt0, ¨ ¨ ¨ , ˆxti´1q “ ˆxt0 `     hjvpˆxtj, tj, θq.                 (10)
+623                                                        j“0
+624    By induction on i, since ˆxt0 “ xt0, it follows that ˆxti “ xti for all i P t0, . . . , Nu. Thus, the TNE
+625     system admits a unique solution identical to the autoregressive trajectory.
+626
+627   C  PROOF OF PROPOSITION 2
+628
+629   We analyze the fixed-point iteration defined in Eq. (6):
+630
+631                      ˆxpk`1qt0  “ xt0,   ˆxpk`1qti  “ Fi´1pˆxpkqt0  , ¨ ¨ ¨ , ˆxpkqti´1q,   i P t1, . . . , Nu.           (11)
+632
+633   We prove by induction that after k iterations, ˆxpkqtj “ xtj for all j ď k.
+634
+       Base case (k “ 1). By definition, ˆxp1qt0 “ xt0. Moreover,635
+636                                               ˆxp1qt1 “ F0pˆxp0qt0 q “ F0pxt0q “ xt1.                           (12)
+637     Thus, indices 0 and 1 are exact after the first iteration.
+638
+639     Inductive step. Suppose ˆxpkqtj “ xtj for all j ď k. At the pk ` 1q-th iteration,
+640                           ˆxpk`1qtk`1 “ Fkpˆxpkqt0  , ¨ ¨ ¨ , ˆxpkqtk q “ Fkpxt0, ¨ ¨ ¨ , xtkq “ xtk`1,               (13)
+641
+       Hence, the pk ` 1q-th variable becomes exact, while all previously correct variables remain un-642
+        changed, since their updates depend only on values already exact.
+643
+644     Conclusion. After N iterations, ˆxpNqtj “ xtj for all j “ 0, . . . , N, establishing exact convergence in
+645      at most N steps.
+646
+647   D  ADDITIONAL QUALITATIVE RESULTS
+
+
+
+                                              12
+
+=== PDF PAGE 13 ===
+       Under review as a conference paper at ICLR 2026
+
+
+
+
+
+648
+649
+
+650
+651
+652
+653
+654
+655
+
+656
+657      (a) A peaceful river surrounded by tall trees and lush greenery on both sides. (b) The glowing ember
+        of a dying fire, surrounded by the charred remains of last night’s logs and a few wispy strands of658
+       smoke curling upwards. (c) Women in swimwear performing synchronized swimming routine. (d)
+659
+     A stunning mountain range at sunset, with snow-capped peaks fading into a brilliant orange and
+660
+        pink sky that stretches endlessly in every direction.
+661
+
+662
+663
+664
+665
+666
+
+667
+668
+669
+670      (e) Frozen lake with frosty trees reflected in the water (f) A stunning portrait of a wise old wood-
+671     worker standing in front of a wooden workbench, surrounded by tools and half-finished projects. (g)
+672     LED-lit cityscape at night (h) Old, creepy carnival at midnight
+673
+674
+675
+676
+677
+678
+
+679
+680
+681
+682       (i) Envision a serene coastal scene featuring a rustic lighthouse situated among towering sand dunes
+       and vast expanses of sandy beach, as the sun rises over the horizon.  (j) An intricately carved Ice-683
+         landic turf roofed cabin standing proudly amidst a windswept landscape of black sand beaches and
+684
+        jagged rock formations. (k) Show a dramatic split-second moment of a thunderstorm unleashing its
+685
+        fury on a deserted highway, with lightning flashing across the darkening sky and debris scattered ev-
+686     erywhere. (l) Depict Captain America standing on a rooftop, looking out over a cityscape at sunset,
+687     with his eyes narrowed in focus as he surveys his surroundings.
+688
+689
+
+690
+691
+692
+693
+694
+695
+
+696
+697    (m) A pod of dolphins swimming through coral reef (n) Desert landscape under stars (o) A mas-
+698      sive thunderstorm unfolding over the Great Sandy Desert, with towering cumulus clouds stretching
+699     across the sky. (p) A vibrant pomegranate fruit sitting alone on a rustic wooden table, surrounded
+700    by lush greenery and autumn leaves.
+701
+        Figure 6: Qualitative results generated by Euler + ParaFlow with different prompts on the FLUX.1-
+       dev and stable-diffusion-3-medium models at a resolution of 1024 ˆ 1024.
+
+                                              13

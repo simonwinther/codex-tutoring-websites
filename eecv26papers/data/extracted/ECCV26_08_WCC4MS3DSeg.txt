@@ -1,0 +1,983 @@
+=== PDF PAGE 1 ===
+  Wavelet-Driven Cross-Domain Consistency for
+   Mixed-Supervised 3D Tumor Segmentation
+
+
+ Tianzhong Lan1,2   , Weili Jiang3, Yisong Liu1, Yi Zhou4, Junqi Bai5, Si Yong
+                  Yeo6, Xulei Yang2,6(B), and Min Zhu1(B)
+
+          1 College of Computer Science, Sichuan University, Chengdu, China
+               2 Agency for Science, Technology and Research, Singapore
+  3 School of Computing and Artificial Intelligence, Southwest Jiaotong University,
+                             Chengdu, China
+             4 The Hong Kong Polytechnic University, Hong Kong, China
+ 5 The 28th Institute of China Electronics Technology Group Corporation, Nanjing,
+                                 China
+ 6 Lee Kong Chian School of Medicine, Nanyang Technological University, Singapore
+                zhumin@scu.edu.cn, yang_xulei@a-star.edu.sg
+
+
+
+
+      Abstract. Accurate 3D tumor segmentation is vital for clinical decision-
+      making, but pixel-wise annotation is expensive. Mixed-supervised learn-
+       ing combines a small set of mask labels with abundant box labels, yet
+       reconstruction-kernel heterogeneity creates large domain gaps. We pro-
+      pose WCC4MS, a jointly optimized lesion-centered framework that mod-
+        els kernel-related frequency shifts via a 3D discrete wavelet transform.
+     The input volume  is decomposed into low- and high-frequency com-
+       ponents, and the scaled high-frequency coefficients generate synthetic
+      smooth and sharp variants. A dual-branch architecture learns from mask
+      and box annotations with task-specific decoders, while a cross-branch
+      KL-divergence constraint enforces semantic consistency. An auxiliary
+      domain-aware head encourages quality-sensitive features and improves
+       robustness to domain shift. At inference, only the segmentation branch is
+      used on candidate-centered patches; the box branch is used only during
+       training to exploit weak annotations. Experiments across three mask-
+      annotated CT datasets and one box-only dataset show consistent gains
+       in segmentation accuracy and cross-domain generalization compared to
+       prior mixed- and weakly supervised methods.
+
+     Keywords: Mixed-supervised segmentation · Cross-domain consistency
+           · 3D wavelet transform
+
+
+
+
+1  Introduction
+
+Tumor segmentation supports clinical decision-making by providing a quantita-
+tive characterization of lesions and analyzing their progression. The availability
+of large training datasets with high-quality masks has been a key factor for
+
+=== PDF PAGE 2 ===
+2      T. Lan et al.
+
+             Limited Full Labels
+                                            Fully Supervised
+                                                      -7%
+                                         Misaligned Mixed            +3%
+
+                                            Aligned Mixed         Abundant Weak Labels
+                (A) Aligned Weak Labels Improve Segmentation
+
+       Unseen Clinical Scenario    …
+
+
+
+        Trained Network
+
+
+
+        Training Stage          …
+
+                            Dataset 1     Dataset 2           Dataset N
+          (B) Aligning Multi-Source Data Distributions for Generalization
+
+Fig. 1:  (A)  Appropriately  integrating abundant weak  annotations  into mixed-
+supervised training improves tumor segmentation efficacy compared to fully supervised
+approaches. (B) In the novel setting of mixed-supervised learning, supervision signals
+come from multi-source datasets, making it critical to align their distributions and
+ensure generalizability to unseen clinical scenarios.
+
+
+
+these advances. However, obtaining such annotations is costly, as it requires ex-
+pert radiologists to perform pixel-wise labeling and cross-validated review to
+ensure accuracy in 3D computed tomography (CT) images with high variability.
+To alleviate the need for a large, labeled segmentation dataset, weakly super-
+vised segmentation with cost-effective labels has attracted considerable attention
+recently. Nevertheless, despite extensive efforts, weakly supervised models gener-
+ally underperform their fully supervised counterparts, limiting their practicality
+in real-world clinical applications. Another promising learning scenario is mixed
+supervision, where only a small fraction of data is densely annotated, and a
+large dataset contains weakly supervised images. Combining these datasets to
+train a unified model framework can maximize the use of available annotations.
+As shown in Figure 1(A), prior work has demonstrated that balancing the task
+weights across the two supervision types can improve segmentation performance.
+These mix-supervised approaches outperform fully supervised learning on small-
+scale datasets [19,27,33]. However, existing methods rarely account for distribu-
+tion differences across datasets that provide different supervision signals [45]. As
+shown in Figure 1(B), variations in image quality across different datasets can
+
+=== PDF PAGE 3 ===
+     Wavelet-Driven Consistency for Mixed-Supervised Tumor Segmentation      3
+
+
+lead to a significant performance drop in clinical applications. Moreover, sim-
+ply integrating existing domain adaptation methods into a mixed supervision
+framework is non-trivial. Image quality assessment and segmentation represent
+fundamentally distinct objectives: the former focuses on identifying shifts in data
+distribution, while the latter prioritizes precise tumor edge classification [4]. This
+fundamental difference poses challenges to existing mix-supervised frameworks.
+   In this paper, we present WCC4MS, a simple yet effective cost-minimization
+framework for 3D tumor segmentation in a mixed-supervised setting. Our dual-
+branch architecture handles mask and box via annotation-type routing and task-
+specific branches. The framework focuses on lesion-centered segmentation af-
+ter candidate localization, which is consistent with common 3D CAD pipelines
+where suspicious regions are first localized and then refined by a lesion-level
+segmentation model. CT data exhibit significant domain variations due to re-
+construction kernels, with high-noise versions preserving sharper edges than
+low-noise counterparts. Inspired by multi-kernel CT analysis [16], we apply 3D
+wavelet transforms [42] to decompose input volumes into low-frequency (LF) and
+high-frequency (HF) components. To approximate kernel-related frequency shifts
+without raw metadata, we scale the HF components to generate smooth and
+sharp variants. To enhance robustness against such heterogeneity, a consistency
+constraint is imposed between the two branches. Furthermore, we introduce a
+domain classification branch to explicitly predict the data provenance, guiding
+the encoder to learn quality-aware features and thereby improving cross-domain
+generalizability and structural consistency.
+    It is worth emphasizing that our method differs fundamentally from the foun-
+dation models [12,21]. While foundation models aim for universal diagnostic ca-
+pability and rely on massive data and computational resources across multiple
+anatomical regions, our approach focuses on maximizing the use of available su-
+pervision within limited datasets and computational budgets, making it more
+practical for clinical deployment. Our contributions are highlighted as follows:
+
+ • We propose WCC4MS, a novel mixed-supervised framework for 3D tumor
+    segmentation that unifies mask-supervised and box-supervised learning in a
+    dual-branch architecture.
+ • We introduce wavelet transforms to model domain shifts and effectively
+    bridge image quality assessment with tumor segmentation tasks to enhance
+    the cross-domain adaptability of the model.
+ • We conduct extensive experiments on three typical tumor segmentation
+    datasets with one auxiliary box dataset. Our method outperforms state-
+    of-the-art approaches.
+
+2  Related Work
+
+2.1  Medical Mixed-supervised Segmentation
+
+Though stronger labels lead to better segmentations, practical clinical deploy-
+ment necessitates label-efficient solutions. Traditional approaches often treat dif-
+ferent supervision types independently. In contrast, mixed-supervised methods
+
+=== PDF PAGE 4 ===
+4      T. Lan et al.
+
+
+can leverage massive, low-cost, and weak labels, as well as a few dense labels,
+to ensure segmentation accuracy. Specifically, recent works address this by de-
+coupling supervision branches, where a basic feature extractor is shared [17,27].
+However, treating these independent branches equally may introduce a high risk
+of overfitting towards weakly supervised data. Recent semi-supervised medical
+segmentation methods also explore teacher-student interactions to improve la-
+bel efficiency, such as DualFete [39], which revisits feedback between teacher and
+student models. Different from these semi-supervised settings, our work focuses
+on mixed supervision with heterogeneous mask and box annotations collected
+from different domains.
+
+
+2.2  Domain Generalization in Medical Imaging
+
+Different supervision signals typically originate from distinct data sources, and
+their simultaneous use may introduce domain shift issues. Domain generaliza-
+tion (DG) aims to learn a model from multiple source domains that can di-
+rectly generalize to unseen target domains [36,44]. Compared to domain adap-
+tation, DG is better suited for medical imaging problems due to the low in-
+teroperability and scarcity of sample diversity characteristic of medical image
+data [10]. Several approaches focus on learning domain-invariant features by
+reducing distribution differences between source domains [6,26,38]. Alternative
+meta-learning strategies simulate domain shifts through episodic training, where
+models are alternately exposed to meta-train and meta-test splits during opti-
+mization [9,13]. Current mixed-supervised models overlook the effects of domain
+shift on generalization. Our wavelet-based framework decomposes CT images
+into multi-frequency components, explicitly modeling acquisition variations to
+improve noise robustness.
+
+
+2.3  Multi-Task Learning
+
+Multi-task learning has proven to be a practical approach for training general-
+ized models that can address multiple objectives simultaneously. Such joint op-
+timization across spatial and scale domains has shown benefits in diverse vision
+tasks [41]. In the medical domain, it has been widely adopted to boost diagnos-
+tic performance by jointly learning related tasks, such as capturing inter-disease
+relationships and leveraging auxiliary information [18,29]. Beyond medical imag-
+ing, structure-enhanced correlation modeling has also benefited other multi-task
+scenarios [15]. Despite its success, a critical aspect often remains underexplored:
+the role of image quality in medical diagnosis. While some prior work has at-
+tempted to include quality assessment as an auxiliary task, they reported limited
+improvements due to the lack of an explicit mechanism to leverage quality in-
+formation effectively [27]. In contrast, WCC4MS introduces a framework that
+explicitly integrates domain knowledge into the diagnostic process, unlocking its
+potential to enhance model accuracy and robustness.
+
+=== PDF PAGE 5 ===
+     Wavelet-Driven Consistency for Mixed-Supervised Tumor Segmentation      5
+
+
+                                              Else Box                 𝓛𝒅𝒄                        𝓛𝒅𝒄
+
+                                     Backbone
+  KernelWave                                                    If
+                                             Mask               𝓛𝒅𝒔𝒄                        𝓛𝒅𝒆𝒕
+
+
+                                                                  Prediction                            Prediction
+                    Smooth Patch                           𝓛𝒌𝒍                          𝓛𝒌𝒍
+                                                                       If
+                                             Mask
+                                                                𝓛𝒅𝒔𝒄                        𝓛𝒅𝒆𝒕    Input          with                                                                                                        Auxiliary                                                               Segment  Mask         or         Box                                                                                           Branch                                                              Branch            Prediction Detect                    Sharp Patch       Backbone            Prediction
+
+                                              Else Box                𝓛𝒅𝒄                       𝓛𝒅𝒄
+
+      KernelWave
+                                                       𝜹     𝟏                 Smooth Patch                                                    HFs
+                                                             𝜹
+                                                                                Waverec
+                                                                                                   Sharp Patch
+                                  Wavedec                             𝜹
+            Input                                    LF
+
+
+Fig. 2: This figure illustrates the overall WCC4MS framework, where KernelWave gen-
+erates smooth and sharp patches to mimic kernel variations. A dual-branch architecture
+jointly learns from mask- and box-supervised data, with consistency and domain-aware
+losses enhancing cross-domain generalization.
+
+
+3  Method
+
+3.1  Overview
+
+We focus on maximizing the utilization of multi-datasets with diverse label cate-
+gories by leveraging the advantages of a dual-branch network to enhance general-
+ization against domain shift. Unlike existing implicitly auxiliary learning [4], we
+leverage the deterministic information provided by bounding boxes, specifically
+their positions and sizes, to explicitly enhance the sensitivity of the network to
+segmentation regions. Figure 2 shows the architecture of the WCC4MS, a frame-
+work specifically designed for domain shift in the mixed supervised paradigm.
+
+
+3.2  KernelWave
+
+The reconstruction kernel is a crucial parameter contributing to domain shifts in
+CT imaging [16]. It operates as frequency-domain filtering, mathematically char-
+acterized via the Fourier transform as the selective amplification or suppression
+of specific frequency components within CT images. However, due to patient pri-
+vacy concerns, public datasets typically do not retain raw metadata, making it
+impossible to unify CT data distributions through the inverse Fourier transform.
+As a widely employed multiscale frequency-domain tool, wavelet transformation
+enables decomposition of CT images acquired with unknown kernels into distinct
+subbands. Adjusting high-frequency subband coefficients enables the generation
+
+=== PDF PAGE 6 ===
+6      T. Lan et al.
+
+
+of smooth or sharp variants that approximate kernel-related frequency shifts
+while preserving the original anatomical structure.
+   Given a 3D medical patch X ∈RD×H×W (D, H, and W indicate the depth,
+height, and width, respectively), the KernelWave processes the image that under-
+goes multi-level wavelet decomposition (MWD). At each level v ∈{1, 2, . . . , V },
+the decomposition produces one LF approximation subband X LLL(v) and seven HF
+detail subbands X ϵ(j) , where ϵ ∈{LLH, LHL, HLL, LHH, HLH, HHL, HHH}.
+Formally, the decomposition can be expressed as:
+
+              l                   a
+             \m      {X } i  hta r
+              athca     \xr g r    ow {\text  {MWD}} \l       thcal{X}_{LLL}^{(V)},\mathcal{X}_{\epsilon}^{(v)}\right\}_{\substack{\epsilon\in\{LLH,LHL,HHH\}v,V}}\right(1)
+                                           eft \{ \m
+
+    Specifically, the LF subband is:
+
+                       \ m c al  {X} ^ {( V )}_{ L LL}\mathcal\phi_L\otimes\phi_L\otimes\phi_L\right\right\downarrow(2)                   ath
+
+   then one of the HF subbands X LLH(j)  can be denoted as:
+
+                             \m c al  {X} ^ {( v )}_{ L LH}\mathcal\phi_L\otimes\phi_L\otimes\psi_H\right\right\downarrow(3)                  ath
+
+   where ϕL is the low-pass scaling function, ψH is the high-pass wavelet func-
+tion, ⊗denotes the tensor product, and ↓2 represents downsampling by a factor
+of 2 along each dimension.
+   To generate kernel-related smooth and sharp variants, the HF detail coeffi-
+cients are adjusted by a scaling factor δ > 1, while the LF coefficient remains
+unchanged. For a sharp kernel image, the modified HF coefficients X ϵ(v) can be                                                      e
+obtained by:
+                                          \wi e t i l {de    \mathcal{X}}^{(v)}_{\epsilon\cdot\mathcal{X}^{(v)}_{\epsilon(4)                                            d
+
+the smooth counterpart can be denoted as:
+
+                                          \wi   t     e {
+                                            d  e    l d \         mathcal{X}}^{(v)}_{\epsilon\frac\cdot\mathcal{X}^{(v)}_{\epsilon(5)
+                                       i
+
+   Given the modified coefficients, the multi-level wavelet reconstruction (MWR)
+reconstructs the modified image as follows:
+
+                     et            \ wid                                X }} = \ mathrm{MWR}\left\mathcal{X}^{(V)}_{LLL},\,\widetilde{\mathcal{X}}^{(v)}_{\epsilon\right\right\in\mathbb{R}^{D\timesH\timesW}.              (6)                    i ld{\me talhca {
+
+Due to potential boundary effects and padding during wavelet processing, the re-
+constructed volume dimensions may differ slightly from the original dimensions.
+Thus, the final result can be adjusted through cropping.
+
+
+3.3  Dual-Branch Mixed Supervision
+
+To effectively leverage heterogeneous supervision while enhancing the adaptabil-
+ity to distribution shifts across multiple data sources, we propose a Dual-Branch
+
+=== PDF PAGE 7 ===
+     Wavelet-Driven Consistency for Mixed-Supervised Tumor Segmentation      7
+
+
+Mixed Supervision (DMS) module. Compared with existing approaches, our de-
+sign offers two key advantages: first, it enables the model to fully exploit all
+available deterministic annotations, including both pixel-level masks and bound-
+ing boxes, to improve segmentation accuracy; second, by enforcing consistency
+between the two task-specific branches and explicitly incorporating a domain
+classification objective, the DMS module enhances the ability to perceive and
+adapt to kernel variations introduced by KernelWave module. The two branches
+share the identical backbones but perform task-specific decoding and supervi-
+sion. Specifically, each segmentation branch is trained with Dice loss Ldsc using
+full-resolution masks:
+
+                                  c a  {L} _ {
+                                    \m a t h         l                   }\frac\limits_{i}p_ig_i\sigma\limits_{i}p_i^2\limits_{i}g_i^2\sigma(7)
+               \ ath r m {ds c }
+                                                          m
+
+where pi and gi denote the predicted probability and the ground truth label
+at voxel i, respectively. σ is a small constant to avoid division by zero. Then,
+the auxiliary detection branch leverages box annotations via a detection loss
+Ldet = Lcls + Lreg [31]:
+
+
+                          i
+                              a           g                                             } \ mat hcal {L
+                  l
+                                     ned           \left egin  {                                                                                                                                                                                        {1}{N}_{i=1}^{N}p_j)\log(p_j)\mathcal{L}_{\mathrm{reg}}\frac{1}{N}_{j=1}^{N}\mathrm{b}_j,b_j)\right{aligned},\right(8)
+                         h
+                            a                                                      ac           r c l s }}  &=- \fr           \{}_{\ m
+           \b    t m  {
+
+   where N represents the number of detected objects, pj means the predicted
+class probability for box j. ˆbj and bj denote the predicted bounding box coordi-
+nates and ground truth box, respectively. IoU(·, ·) denotes the Intersection over
+Union. To enhance consistency between the two predictions, we further impose
+a KL-divergence loss Lkl across the output distributions for either segmentation
+branches or detection branches:
+
+               r                                         {k r                              a               L          a                           m                                                  l                                  | } u \s                      \Omegap^{(1)}_i\log\left({p^{(1)}_i}{p^{(2)}_i)(1p^{(1)}_i)\log\left(p^{(1)}_i}{1p^{(2)}_i)    a                                                                                                                  ,    (9)            \ m                      }_{\m  ath                      a c { 1}{|\  O meg                                             =          thc                     l {             }} \ f                  m   _{i\ i n
+
+where Ωis the set of voxels in the predicted 3D volume, p(1)i  and p(2)i   are the
+foreground probability predicted by the first branch and the second branch at
+voxel i. σ is still a small constant to avoid numerical instability.
+   To further enhance the awareness of domain-specific characteristics, we in-
+troduce a domain classification loss Ldc by supervising a lightweight domain
+prediction head for each branch:
+
+
+                             t
+                                     \ m a h  _{L} {\m athrm {dc}}_{c=1}^{C}y_{k}^{(c)}\log{y}_{k}^{(c)},                      (10)
+                                   cal
+
+=== PDF PAGE 8 ===
+8      T. Lan et al.
+
+where C denotes the total number of datasets, y(c)k  denotes the ground truth one-
+hot indicator for domain c on sample k. ˆy(c)k   illustrates the predicted softmax
+probability that sample k belongs to domain c. The auxiliary domain head is
+used as a domain-aware regularizer rather than an adversarial domain-invariant
+module. It encourages the encoder to retain image-quality and domain-related
+cues, while the segmentation, detection, and KL losses constrain these cues to
+remain task-relevant. This design improves robustness without explicitly forcing
+domain-invariant features. All loss components are jointly optimized:
+
+                           \mat h cal {L } _{\tex t  {tot a l}} =     \lambda\mathcal{L}_{\mathrm{dsc}}\lambda_{2}\mathcal{L}_{\mathrm\lambda_{3}\mathcal{L}_{\mathrm{kl}}\lambda_{4}\mathcal{L}_{\mathrm{dc}}.             (11)
+
+It is worth noting that, except for the KL divergence terms, all other losses are
+computed as the summation of contributions from the dual-branch.
+
+
+4  Experiments
+
+4.1  Datasets
+
+In our experiments, we split each dataset with masks into training and test
+sets with a 4:1 ratio. The PN9, which contains only box annotations, is used
+exclusively to provide auxiliary training and is not involved in evaluation.
+
+ • LIDC-IDRI: The LIDC-IDRI [2] dataset comprises lung cancer screening
+    thoracic CT scans with marked-up annotated tumors. Following the previous
+   work [29], we include only CT scans that meet the LUNA16 selection criteria,
+    resulting in 586 CT scans with a total of 1,131 nodules.
+ • MSD-Lung: The MSD-Lung is part of the MSD [1] collection. It contains 3D
+  CT scans from 63 patients.
+ • LNDb: LNDb is a dataset comprising 294 lung CT scans [25]. The database
+    comprises 1429 unique findings by five radiologists.
+ • PN9: The CT scans in PN9 are obtained by a series of CT manufacturers
+   and corresponding models, which are multidomain [23]. It contains 8798 CT
+    scans with 40439 bounding boxes for nodules.
+
+  We focus on lung tumor segmentation for two key reasons: (1) The abun-
+dance of publicly available lung CT datasets enables robust cross-validation and
+statistical power; (2) Lung tumors exhibit high heterogeneity in size (3–95mm),
+morphology (spiculated/lobulated), and density (GGN/solid), making them a
+representative benchmark for mixed-supervision learning in medical imaging.
+
+
+4.2  Implementation and Training Details
+
+The networks are implemented using PyTorch 2.1.1, and the experiments are
+performed on two Nvidia GeForce RTX 4090 GPUs with 24 GB of memory. We
+use a stochastic gradient descent (SGD) optimizer with a base learning rate of
+0.01, momentum of 0.9, and weight decay of 1e-4. The learning rate is adjusted
+
+=== PDF PAGE 9 ===
+     Wavelet-Driven Consistency for Mixed-Supervised Tumor Segmentation      9
+
+
+Table 1: Performance comparison with other state-of-the-art methods using 3D UNet
+as the backbone. We evaluate the performance using two metrics: DSC (%) and HD95.
+The strong-weak annotation ratio during training is 1:2. Bold numbers indicate the
+best results, while underlined numbers indicate the second-best results.
+
+
+                                LIDC-IDRI  MSD-Lung    LNDb
+        Type         Methods
+                          DSC↑HD95↓DSC↑HD95↓DSC↑HD95↓
+     Fully Supervised  3D UNet [28]  77.26  1.92  56.46  7.31  63.24  8.59
+                  SANPNet [7]  65.31  2.86  46.83  14.46  57.76  14.20
+                  MonoBox [14]  68.03  2.75  47.21  15.56  60.25  11.46
+   Weakly Supervised
+                    ReliableMD [8] 68.54  2.73  46.14  14.19  61.21  12.32
+                       BoxInst [32]   66.86  2.78  48.95  14.93  60.47  11.85
+                  MIST [19]    77.45  1.90  56.18  8.14  64.00  8.27
+                  ConfKD [17]  73.85  2.47  52.02  12.26  63.18  9.87
+                   MixSegNet [37] 78.19  1.75  55.36  8.13  63.72  8.39
+    Mixed Supervised
+                WSL4MIS [20] 77.62  1.73  57.01  7.49  63.99  8.63
+               MSDN [33]   72.44  2.53  51.94  12.13  62.25  9.76
+                     Ours     80.32  1.52 57.93  7.06 65.84  7.98
+
+
+
+using a cosine annealing scheduler. We use a Haar wavelet with decomposition
+level V = 2. WCC4MS is trained with a batch size of 8 for 80 epochs. Follow-
+ing previous work [17,27,40], we assume that the first-stage detection task has
+already been completed for all annotated nodules, thus not affecting practical
+clinical applicability. We crop a 96×96×96 patch centered on the annotation
+from the entire CT image for both training and testing. During testing, we only
+use the model with the segmentation branch for inference. Following previous
+works [38, 45], we evaluate segmentation performance using two standard met-
+rics: the Dice Similarity Coefficient (DSC) in percentages and the 95% Hausdorff
+Distance (HD95).
+
+
+4.3  Comparison With State-of-the-Art Methods
+
+Quantitative Results with Label-Efficient Methods We set the strong-
+weak ratio at 1:2 during the training stage. The PN9 dataset provides weak
+labels. We compare our approach with five other mixed-supervision methods
+and four weakly supervised methods designed for medical images. For a fair
+comparison, all competing methods are evaluated under the same box or mixed-
+supervision setting with the widely adopted 3D UNet [28] as the backbone and
+training pipeline. As illustrated in Table 1, the WCC4MS outperforms other
+methods on all three datasets. Remarkably, it demonstrates superior performance
+on the LIDC-IDRI dataset, achieving substantial improvements of 2.1% and 3.1%
+in DSC over the second-best method and the fully supervised method, respec-
+tively. Quantitative analysis reveals that WCC4MS more effectively leverages
+weak annotations compared to existing mixed-supervised and weakly-supervised
+approaches.
+
+=== PDF PAGE 10 ===
+10     T. Lan et al.
+
+
+Table 2: We replace backbone 3D UNet by 3D UNetr, while maintaining other setting.
+
+
+                                LIDC-IDRI  MSD-Lung    LNDb
+        Type         Methods
+                          DSC↑HD95↓DSC↑HD95↓DSC↑HD95↓
+     Fully Supervised  3D UNetr [11]  79.33  1.80  58.05  8.47  64.89  8.24
+                  SANPNet [7]  67.19  2.74  50.13  14.13  55.61  13.85
+                  MonoBox [14]  70.11  2.42  49.86  13.14  60.17  11.76
+   Weakly Supervised
+                    ReliableMD [8] 71.34  2.56  49.14  13.88  63.27  9.62
+                       BoxInst [32]   67.43  2.46  50.76  12.64  60.89  10.73
+                  MIST [19]    79.66  1.86  57.41  8.13  64.97  8.13
+                  ConfKD [17]  74.75  2.29  54.49  11.31  63.61  9.72
+                   MixSegNet [37] 79.19  1.64  58.36  8.67  65.77  7.86
+    Mixed Supervised
+                WSL4MIS [20] 80.15  1.74  57.39  8.39  64.99  7.98
+               MSDN [33]   74.96  2.04  53.79  9.65  63.36  9.32
+                     Ours     81.16  1.43 60.02  8.21  67.90  7.51
+
+
+
+   To validate the robustness using a different backbone, we replace the back-
+bone from 3D UNet with the also widely used 3D UNetr [11]. The results in
+Table 2 demonstrate that the proposed WCC4MS outperforms all compared
+methods in most tasks, except for the HD95 score in the MSD-Lung dataset,
+where it slightly underperforms compared to MIST (another recently state-of-
+the-art method for mixed-supervised segmentation).
+
+
+Quantitative Results with Cross-Domain Methods To validate the adapt-
+ability of our method to diverse data distributions, we compare it with other
+state-of-the-art domain generalization methods. Following the standard eval-
+uation protocol in domain generalization research, we employ the "leave-one-
+domain-out" strategy: using the test set from one domain as the target domain
+and using only the training sets from the other domains as the source domains.
+The experimental results are presented in Table 3. The DeepAll refers to a 3D
+UNet without any domain generalization method. It serves as a lower bound.
+The experimental results demonstrate that WCC4MS achieves state-of-the-art
+performance across all three datasets, outperforming the second-best method
+(GTVSeg) by significant margins of 1.9% in DSC and 2.0 in HD95 on average.
+
+
+Comparison with Segmentation Anything Models For completeness, we
+additionally compare our method with the Segment Anything Model (SAM)
+series in Table 4. The results show that our method consistently achieves better
+lesion segmentation performance, especially for small tumors where SAM-based
+models often struggle.
+
+
+Cross-Modality Validation on MRI The MRI experiment is used as a cross-
+modality extension to test whether the frequency-domain consistency principle
+generalizes beyond CT. We construct a four-dataset MRI setting using three
+
+=== PDF PAGE 11 ===
+     Wavelet-Driven Consistency for Mixed-Supervised Tumor Segmentation     11
+
+
+Table 3: Performance comparison with other domain generalization methods using
+3D UNet as the backbone.
+
+
+                  LIDC-IDRI  MSD-Lung    LNDb       Average
+      Methods
+              DSC↑HD95↓DSC↑HD95↓DSC↑HD95↓DSC↑HD95↓
+
+       DeepAll      59.47  8.49  44.24  18.76  51.27  15.90  51.66  14.38
+     MKCNet [4]  63.79  6.25  48.63  15.48  54.50  12.18  55.64  11.30
+      XNet [45]    61.50  6.83  52.71  14.22  56.94  13.61  57.05  11.55
+     M2CAN [43] 63.44  7.25  51.08  13.84  56.15  11.97  56.89  11.02
+      GTVSeg [35] 66.53  5.89  52.48  12.76  54.79  13.43  57.93  10.69
+
+      Ours       67.21  5.38 53.61 12.40 58.84 11.26 59.88  9.68
+
+
+             Table 4: Performance Comparison with SAM series.
+
+
+                         LIDC-IDRI  MSD-Lung    LNDb
+          Methods
+                    DSC↑HD95↓DSC↑HD95↓DSC↑HD95↓
+
+        MedSAM2 [22]   74.58  2.81  53.97  9.50  63.97  8.12
+          Ma-sam [5]       75.06  4.19  48.33  10.96  61.67  9.88
+         SAM-Med3D [34] 78.37  1.99  50.15  8.31  59.14  9.94
+
+         Ours          80.32  1.52 57.93  7.06 65.84  7.98
+
+
+
+mask-labeled benchmarks (BraTS [3], MSD-BT [1], FeTS [24]) and one box-only
+set (TCGA-GBM [30]) for training. As summarized in Table 5, the primary
+CT-kernel motivation remains evaluated on CT datasets, while the MRI results
+indicate that the same design can also benefit broader protocol-induced appear-
+ance shifts.
+
+
+Qualitative Results To further demonstrate the superiority of our method,
+we present the qualitative comparison with other state-of-the-art methods in
+Figure 3. The CT images are acquired from multiple domains, and the nodules
+present diverse radiological characteristics. However, the proposed WCC4MS
+accurately identifies subtle boundaries while maintaining consistency with the
+complex shape.
+
+
+4.4  Ablation Study
+
+Experiments under Different Strong-Weak Ratio We conduct compar-
+ative experiments on the LIDC-IDRI dataset using the DSC as the evaluation
+metric, comparing existing mixed-supervision methods. With a fixed number
+of mask-annotated samples, introducing weakly-labeled box data (adjusting the
+mask-to-box ratio from 1:0 to 1:2) led to performance gains for our method and
+three other representative approaches. This indicates that a moderate number
+
+=== PDF PAGE 12 ===
+12     T. Lan et al.
+
+
+           Table 5: MRI mixed-supervised segmentation comparison.
+
+
+                                 BraTS    MSD-BT     FeTS
+        Type         Methods
+                          DSC↑HD95↓DSC↑HD95↓DSC↑HD95↓
+     Fully Supervised  3D UNet [28]  83.26  9.15  80.97  4.46  82.41  8.62
+                  SANPNet [7]  70.39  12.97  72.53  7.60  68.46  11.61
+                  MonoBox [14]  72.41  12.06  73.54  7.09  69.84  11.87
+   Weakly Supervised
+                    ReliableMD [8] 74.59  11.23  73.78  6.88  71.29  10.56
+                       BoxInst [32]   72.86  11.63  75.90  7.45  73.96  11.85
+                  MIST [19]    83.52  9.01  80.79  4.14  82.07  8.39
+                  ConfKD [17]  80.56  10.89  79.10  6.24  81.33  9.98
+                   MixSegNet [37] 79.87  9.98  80.62  5.20  80.90  10.24
+    Mixed Supervised
+                WSL4MIS [20] 82.74  9.53  81.08  4.32  81.73  9.79
+               MSDN [33]   83.71  9.37  78.26  5.68  80.55  9.10
+                     Ours     85.69  8.75 83.04  3.73 83.62  7.78
+
+
+
+
+       GT    SANPNet MonoBox ReliableMD  BoxInst   MIST   ConfKD  MixSegNet WSL4MIS  MSDN    Ours
+
+                                          65.31             68.03             68.54             66.86             77.45             73.85             78.19             77.62             72.44             80.32
+         LIDC-IDRI                                    2.86              2.75              2.73              2.78              1.90              2.47              1.75              1.73              2.53              1.52
+
+
+
+
+
+                                          46.83             47.21             46.14             48.95             56.18             52.02             55.36             57.01             51.94             57.93
+                                          14.46             15.56             14.19             14.93              8.14             12.26              8.13              7.49             12.13              7.06
+        MSD-Lung
+
+
+
+
+
+                                          57.76             60.25             61.21             60.47             64.00             63.18             63.72             63.99             62.25             65.84
+                                          14.20             11.46             12.32             11.85              8.27              9.87              8.39              8.63              9.76              7.98
+
+    LNDb
+
+
+
+Fig. 3: Visualization results of different methods using 3D UNet as the backbone on
+three mask datasets. The blue and yellow numbers represent the DSC (%) and HD95
+values for the corresponding methods, respectively. True Positives (TP), false positives
+(FP), and false negatives (FN) are marked by purple, pink, and yellow, respectively.
+Our method yields smaller FP and FN regions than other methods.
+
+
+
+
+of box-level annotations can effectively enhance segmentation quality. However,
+as the ratio increased further from 1:2 to 1:4, the DSCs begin a more rapid drop
+observed near the 1:5 ratio. This trend suggests that excessive box supervision
+may divert models’ attention from fine-grained boundary textures, ultimately
+degrading segmentation performance.
+
+=== PDF PAGE 13 ===
+     Wavelet-Driven Consistency for Mixed-Supervised Tumor Segmentation     13
+
+
+Table 6: Ablation studies on the proposed components on the LIDC-IDRI dataset.
+The p-value denotes a statistical significance test for DSC (vs. proposed WCC4MS).
+
+
+             No. KW  KL DC AD  DSC↑  HD95↓   p-value
+              1                           63.17    3.74     0.009
+              2            ✔    72.95    2.39     0.015
+              3   ✔  ✔  ✔         66.27    3.10     0.001
+              4   ✔  ✔     ✔    76.89    2.03     0.005
+              5   ✔     ✔  ✔    78.05    1.95     0.036
+              6      ✔  ✔  ✔    75.46    2.17     0.018
+              7   ✔  ✔  ✔  ✔   80.32   1.52         -
+
+
+
+
+
+Fig. 4: DSC (%) of methods under the five ratios (box: mask) on the LIDC-IDRI
+dataset. The black-dashed line represents performance under full supervision.
+
+
+
+Contribution of the Key Components We conduct ablation experiments
+to validate the effectiveness of the four key components: KernelWave (KW),
+KL consistency (KL), the auxiliary domain-aware regularizer (DC), and the
+auxiliary detection branch (AD). As shown in Table 6, removing AD causes the
+largest performance drop, highlighting the importance of exploiting box-level
+weak labels during training. Removing KW also leads to a larger degradation
+than removing KL or DC, indicating that approximating kernel-related frequency
+shifts is important for cross-domain adaptability.
+   Since disabling AD also removes the mechanism that uses box supervision,
+we additionally perform an AD-fixed controlled check to isolate KW/KL/DC.
+Starting from AD-only, adding KW provides the largest gain (+2.04% DSC).
+Adding KL and DC further improves stability and boundary robustness, reducing
+the five-seed DSC standard deviation from 0.31 to 0.12 and HD95 from 2.36 mm
+to 1.54 mm. Removing DC decreases cross-domain DSC by 1.6%, supporting its
+role as a domain-aware regularizer rather than a redundant classifier.
+
+=== PDF PAGE 14 ===
+14     T. Lan et al.
+
+
+Table 7: Comparison under different wavelet gains δ, loss weights λ1–4, and frequency
+augmentation strategies.
+
+  (a) Wave gain        (b) Loss weights              (c) Frequency
+
+δ  DSC↑  HD95↓  λ1–4       DSC↑HD95↓ Strategy      DSC↑  HD95↓
+
+2    79.26      1.62  (1,1,2,0.1)      79.43    1.97 Laplacian       76.98     2.32
+3    80.01      1.56  (1,1,1,0.5)      80.19    1.86 Gaussian blur   79.48     2.15
+4   80.32     1.52  (1,1,0.1,0.5)    79.65    1.81 Fourier          77.56     1.98
+5    79.94      1.59  (1,1,0.5,0.1) 80.32   1.52 KernelWave  80.32    1.52
+
+
+Table 8: Mechanism-level validation of KernelWave. RKPN is used only to evaluate
+real multi-kernel frequency behavior, not as an additional segmentation benchmark.
+
+
+            Analysis                         Metric        Result
+
+           Real B60f/B31f on RKPN    HF-energy ratio     1.44
+            KernelWave-sharp/original    HF-energy ratio     1.50
+           Real vs. KernelWave shift      Spectral corr.    r = 0.71
+           Gaussian blur on LIDC-IDRI   DSC (%)     79.48±0.44
+           KernelWave on LIDC-IDRI     DSC (%)     80.32±0.15
+
+
+
+Mechanism-level validation of KernelWave Although KernelWave is mo-
+tivated by CT reconstruction-kernel variation, it is not intended to exactly sim-
+ulate the reconstruction process. Instead, it serves as a metadata-free frequency
+proxy that approximates the dominant kernel-related effect, i.e., high-frequency
+amplification or suppression. To verify whether this proxy is consistent with real
+multi-kernel CT data, we analyze RKPN, a paired B31f/B60f lung CT dataset
+reconstructed with smooth and sharp kernels. Since RKPN provides detection
+annotations rather than voxel-wise masks, we use it only for mechanism-level
+frequency validation, not as an additional segmentation benchmark.
+   As shown in Table 8, KernelWave-induced sharp variants increase high-
+frequency energy in the same direction as real B31f/B60f reconstruction differ-
+ences. The high-frequency energy ratio is 1.50 for KernelWave-sharp/original and
+1.44 for real B60f/B31f. The spectral correlation between real and KernelWave-
+induced frequency changes reaches r = 0.71, indicating that KernelWave cap-
+tures kernel-related frequency shifts rather than arbitrary perturbations. In addi-
+tion, a five-seed comparison on LIDC-IDRI shows that KernelWave significantly
+outperforms Gaussian blur, further supporting the benefit of wavelet-based high-
+frequency modulation over generic smoothing.
+
+
+Hyperparameters Analysis The results in Table 7 reveal that the model
+benefits from a proper wavelet gain δ = 4, it yields the best balance between edge
+enhancement and stability. The optimal loss-weight configuration (1, 1, 0.5, 0.1)
+suggests that moderate weighting of the auxiliary consistency and domain losses
+helps regularize training without suppressing supervised gradients. Moreover,
+
+=== PDF PAGE 15 ===
+     Wavelet-Driven Consistency for Mixed-Supervised Tumor Segmentation     15
+
+
+
+
+
+         Fig. 5: Robustness against box noise on the LIDC-IDRI dataset.
+
+
+
+among various frequency augmentations, KernelWave achieves the best results,
+confirming the advantage of learning adaptive high-frequency modulation over
+conventional handcrafted filters.
+
+
+Robustness Analysis Under Box Perturbations As shown in Figure 5, the
+noise level denotes the percentage of random perturbation applied to each box’s
+center position and edge length. This result demonstrates that the WCC4MS
+effectively suppresses error propagation from noisy weak labels and enhances ro-
+bustness to annotation inaccuracies. Specifically, under 20% box noise, WCC4MS
+retains 77.6% DSC while the strongest baseline drops to 72.9%, showing a
+markedly smaller degradation.
+
+
+5  Conclusion
+
+We propose a wavelet-driven mixed-supervised framework for cross-domain 3D
+tumor segmentation. By integrating masks and boxes through a Dual-Branch
+Supervision module with cross-branch consistency, KernelWave enables domain-
+aware representation learning that improves robustness to CT reconstruction
+variations. Experiments across multiple datasets demonstrate superior perfor-
+mance under varied annotation ratios. Future work will extend the framework
+to other modalities and weaker annotation regimes.
+
+
+Acknowledgements
+
+This work was supported by the National Key R&D Program of China under
+Grant 2023YFB2604100 and the Science and Technology Program of Tibet Au-
+tonomous Region under Grant XZ202601ZY0087.
+
+=== PDF PAGE 16 ===
+16     T. Lan et al.
+
+References
+
+ 1. Antonelli, M., Reinke, A., Bakas, S., Farahani, K., Kopp-Schneider, A., Landman,
+    B.A., Litjens, G., Menze, B., Ronneberger, O., Summers, R.M., et al.: The medical
+    segmentation decathlon. Nature communications 13(1), 4128 (2022)
+ 2. Armato III, S.G., McLennan, G., Bidaut, L., McNitt-Gray, M.F., Meyer, C.R.,
+    Reeves, A.P., Zhao, B., Aberle, D.R., Henschke, C.I., Hoffman, E.A., et al.: The
+    lung image database consortium (lidc) and image database resource initiative (idri):
+    a completed reference database of lung nodules on ct scans. Medical physics 38(2),
+    915–931 (2011)
+ 3. Baid, U., et al.: The rsna-asnr-miccai brats 2021 benchmark on brain tumor seg-
+    mentation and radiogenomic classification. arXiv preprint arXiv:2107.02314 (2021)
+ 4. Che, H., Chen, S., Chen, H.: Image quality-aware diagnosis via meta-knowledge
+    co-embedding. In: Proceedings of the IEEE/CVF Conference on Computer Vision
+   and Pattern Recognition. pp. 19819–19829 (2023)
+ 5. Chen, C., Miao, J., Wu, D., Zhong, A., Yan, Z., Kim, S., Hu, J., Liu, Z., Sun,
+     L., Li, X., et al.: Ma-sam: Modality-agnostic sam adaptation for 3d medical image
+    segmentation. Medical Image Analysis 98, 103310 (2024)
+ 6. Chen, R., Dong, Y., Liu, Y., Fan, T., Li, D., Guan, Z., Liu, J., Zhou, J.: Flock:
+   Robust and privacy-preserving federated learning based on practical blockchain
+    state channels. In: Proceedings of the ACM on Web Conference 2025. pp. 884–895
+    (2025)
+ 7. Chi, J., Lin, G., Li, Z., Zhang, W., Chen, J.h., Huang, Y.: Coarse for fine: Bounding
+   box supervised thyroid ultrasound image segmentation using spatial arrangement
+   and hierarchical prediction consistency. IEEE Journal of Biomedical and Health
+    Informatics (2025)
+ 8. Fang, C., Wang, Q., Cheng, L., Gao, Z., Pan, C., Cao, Z., Zheng, Z., Zhang,
+    D.: Reliable mutual distillation for medical image segmentation under imperfect
+    annotations. IEEE Transactions on Medical Imaging 42(6), 1720–1734 (2023)
+ 9. Feng, B., Liu, Z., Huang, N., Xiao, Z., Zhang, H., Mirzoyan, S., Xu, H., Hao, J., Xu,
+    Y., Zhang, M., et al.: A bioactivity foundation model using pairwise meta-learning.
+    Nature Machine Intelligence 6(8), 962–974 (2024)
+10. Guan, H., Liu, M.: Domain adaptation for medical image analysis: a survey. IEEE
+    Transactions on Biomedical Engineering 69(3), 1173–1185 (2021)
+11. Hatamizadeh, A., Tang, Y., Nath, V., Yang, D., Myronenko, A., Landman, B.,
+    Roth, H.R., Xu, D.: Unetr: Transformers for 3d medical image segmentation. In:
+    Proceedings of the IEEE/CVF winter conference on applications of computer vi-
+     sion. pp. 574–584 (2022)
+12. He,  S., Nie, Y., Chen,  Z., Cai,  Z., Wang, H., Yang,  S., Chen, H.: Meddr:
+    Diagnosis-guided bootstrapping for large-scale medical vision-language learning.
+   CoRR (2024)
+13. Hospedales, T., Antoniou, A., Micaelli, P., Storkey, A.: Meta-learning in neural
+    networks: A survey. IEEE transactions on pattern analysis and machine intelligence
+    44(9), 5149–5169 (2021)
+14. Hu, Q., Yi, Z., Zhou, Y., Huang, F., Liu, M., Li, Q., Wang, Z.: Monobox: Tightness-
+     free box-supervised polyp segmentation using monotonicity constraint. In: Pro-
+    ceedings of the AAAI Conference on Artificial Intelligence. vol. 39, pp. 3572–3580
+    (2025)
+15. Huang, G., Zhang, J., Zhou, K., Yi, Z., Xu, X.: Rose: A role correlation structure-
+    enhanced model for multi-event argument extraction. In: Proceedings of the AAAI
+    Conference on Artificial Intelligence. vol. 40, pp. 31131–31139 (2026)
+
+=== PDF PAGE 17 ===
+     Wavelet-Driven Consistency for Mixed-Supervised Tumor Segmentation     17
+
+
+16. Lan, T., Zeng, F., Yi, Z., Xu, X., Zhu, M.: Icnodulenet: Enhancing pulmonary nod-
+    ule detection performance on sharp kernel ct imaging. IEEE Journal of Biomedical
+   and Health Informatics (2024)
+17. Liu, B., Desrosiers, C., Ayed, I.B., Dolz, J.: Segmentation with mixed supervision:
+    Confidence maximization helps knowledge distillation. Medical Image Analysis 83,
+    102670 (2023)
+18. Liu, H., Wei, D., Lu, D., Sun, J., Wang, L., Zheng, Y.: M3ae: Multimodal repre-
+    sentation learning for brain tumor segmentation with missing modalities. In: Pro-
+    ceedings of the AAAI conference on artificial intelligence. vol. 37, pp. 1657–1665
+    (2023)
+19. Liu, J., Bhadra, S., Shafaat, O., Mukherjee, P., Parnell, C., Summers, R.M.: A
+    unified approach to medical image segmentation by leveraging mixed supervision
+   and self and transfer learning (mist). Computerized Medical Imaging and Graphics
+    122, 102517 (2025)
+20. Luo, X., Hu, M., Liao, W., Zhai, S., Song, T., Wang, G., Zhang, S.: Scribble-
+    supervised medical image segmentation via dual-branch network and dynamically
+   mixed pseudo labels supervision. In: International Conference on Medical Image
+   Computing and Computer-Assisted Intervention. pp. 528–538. Springer (2022)
+21. Ma, J., Guo, Z., Zhou, F., Wang, Y., Xu, Y., Li, J., Yan, F., Cai, Y., Zhu, Z.,
+    Jin, C., et al.: Towards a generalizable pathology foundation model via unified
+    knowledge distillation. arXiv preprint arXiv:2407.18449 (2024)
+22. Ma, J., Yang, Z., Kim, S., Chen, B., Baharoon, M., Fallahpour, A., Asakereh, R.,
+    Lyu, H., Wang, B.: Medsam2: Segment anything in 3d medical images and videos.
+    arXiv preprint arXiv:2504.03600 (2025)
+23. Mei, J., Cheng, M.M., Xu, G., Wan, L.R., Zhang, H.: Sanet: A slice-aware net-
+   work for pulmonary nodule detection. IEEE transactions on pattern analysis and
+    machine intelligence 44(8), 4374–4387 (2021)
+24. Pati, S., Baid, U., Zenk, M., Edwards, B., Sheller, M., Reina, G.A., Foley, P.,
+    Gruzdev, A., Martin, J., Albarqouni, S., Chen, Y., Shinohara, R.T., Reinke, A.,
+    Zimmerer, D., Freymann, J.B., Kirby, J.S., Davatzikos, C., Colen, R.R., Kotrotsou,
+    A., Marcus, D., Milchenko, M., Nazeri, A., Fathallah-Shaykh, H., Wiest, R., Jakab,
+    A., Weber, M.A., Mahajan, A., Maier-Hein, L., Kleesiek, J., Menze, B., Maier-Hein,
+    K., Bakas, S.: The federated tumor segmentation (fets) challenge. arXiv preprint
+    arXiv:2105.05874 (2021)
+25. Pedrosa, J., Aresta, G., Ferreira, C., Rodrigues, M., Leitão, P., Carvalho, A.S.,
+    Rebelo, J., Negrão, E., Ramos, I., Cunha, A., et al.: Lndb: a lung nodule database
+   on computed tomography. arXiv preprint arXiv:1911.08434 (2019)
+26. Peng, D., Lei, Y., Hayat, M., Guo, Y., Li, W.: Semantic-aware domain generalized
+    segmentation. In: Proceedings of the IEEE/CVF conference on computer vision
+   and pattern recognition. pp. 2594–2605 (2022)
+27. Rajagopal, A., Westphalen, A.C., Velarde, N., Simko, J.P., Nguyen, H., Hope, T.A.,
+    Larson, P.E., Magudia, K.: Mixed supervision of histopathology improves prostate
+    cancer classification from mri. IEEE Transactions on Medical Imaging (2024)
+28. Ronneberger, O., Fischer, P., Brox, T.: U-net: Convolutional networks for biomed-
+     ical image segmentation. In: Medical image computing and computer-assisted
+    intervention–MICCAI 2015: 18th international conference, Munich, Germany, Oc-
+    tober 5-9, 2015, proceedings, part III 18. pp. 234–241. Springer (2015)
+29. Tang, H., Zhang, C., Xie, X.: Nodulenet: Decoupled false positive reduction for
+   pulmonary nodule detection and segmentation. In: Medical Image Computing and
+   Computer Assisted Intervention–MICCAI 2019: 22nd International Conference,
+
+=== PDF PAGE 18 ===
+18     T. Lan et al.
+
+
+    Shenzhen, China, October 13–17, 2019, Proceedings, Part VI 22. pp. 266–274.
+    Springer (2019)
+30. The Cancer Imaging Archive (TCIA): The cancer genome atlas glioblastoma mul-
+    tiforme collection (tcga-gbm). The Cancer Imaging Archive (2016)
+31. Tian, Z., Shen, C., Chen, H., He, T.: Fcos: Fully convolutional one-stage object
+    detection. In: Proceedings of the IEEE/CVF international conference on computer
+     vision. pp. 9627–9636 (2019)
+32. Tian, Z., Shen, C., Wang, X., Chen, H.: Boxinst: High-performance instance seg-
+    mentation with box annotations. In: Proceedings of the IEEE/CVF Conference on
+   Computer Vision and Pattern Recognition. pp. 5443–5452 (2021)
+33. Wang, D., Li, M., Ben-Shlomo, N., Corrales, C.E., Cheng, Y., Zhang, T., Jayender,
+     J.: Mixed-supervised dual-network for medical image segmentation. In: Medical
+   Image Computing and Computer Assisted Intervention–MICCAI 2019: 22nd In-
+    ternational Conference, Shenzhen, China, October 13–17, 2019, Proceedings, Part
+     II 22. pp. 192–200. Springer (2019)
+34. Wang, H., Guo, S., Ye, J., Deng, Z., Cheng, J., Li, T., Chen, J., Su, Y., Huang,
+     Z., Shen, Y., et al.: Sam-med3d: towards general-purpose segmentation models
+     for volumetric medical images. In: European Conference on Computer Vision. pp.
+    51–67. Springer (2024)
+35. Wang, H., Chen, J., Zhang, S., He, Y., Xu, J., Wu, M., He, J., Liao, W., Luo,
+    X.: Dual-reference source-free active domain adaptation for nasopharyngeal carci-
+   noma tumor segmentation across multiple hospitals. IEEE Transactions on Medical
+    Imaging 43(12), 4078–4090 (2024)
+36. Wang, J., Lan, C., Liu, C., Ouyang, Y., Qin, T., Lu, W., Chen, Y., Zeng, W., Yu,
+     P.S.: Generalizing to unseen domains: A survey on domain generalization. IEEE
+    transactions on knowledge and data engineering 35(8), 8052–8072 (2022)
+37. Wang, Z., Yang, C.: Mixsegnet: Fusing multiple mixed-supervisory signals with
+    multiple views of networks for mixed-supervised medical image segmentation. En-
+    gineering Applications of Artificial Intelligence 133, 108059 (2024)
+38. Yao, H., Hu, X., Li, X.: Enhancing pseudo label quality for semi-supervised domain-
+    generalized medical image segmentation. In: Proceedings of the AAAI conference
+   on artificial intelligence. vol. 36, pp. 3099–3107 (2022)
+39. Yi, L., Huang, W., Zhang, L., Zhao, K., Wang, Y., Wang, Z.: Dualfete: Revisit-
+    ing teacher-student interactions from a feedback perspective for semi-supervised
+    medical image segmentation. In: Proceedings of the AAAI Conference on Artificial
+     Intelligence. vol. 40, pp. 27852–27860 (2026)
+40. Yi, L., Zhang, L., Zhao, K., Xu, X.: Learning from certain regions of interest
+    in medical images via probabilistic positive-unlabeled networks. Medical Image
+    Analysis p. 103745 (2025)
+41. Zhang, G., Wang, Y., Huo, F., Yan, R., Zhang, N., Fu, X.: Glgaze: In-vehicle gaze
+    estimation via joint global-local enhancement in the spatial and scale domains.
+    Expert Systems with Applications p. 133363 (2026)
+42. Zhang, M., Wang, L., Gu, L., Ling, T., Tao, X.: Wt-bcp: Wavelet transform based
+    bidirectional copy-paste for semi-supervised medical image segmentation. arXiv
+    preprint arXiv:2504.14445 (2025)
+43. Zhao, S., Jiang, J., Tang, W., Zhu, J., Chen, H., Xu, P., Schuller, B.W., Tao,
+     J., Yao, H., Ding, G.: Multi-source multi-modal domain adaptation. Information
+    Fusion 117, 102862 (2025)
+44. Zhou, K., Liu, Z., Qiao, Y., Xiang, T., Loy, C.C.: Domain generalization: A survey.
+   IEEE transactions on pattern analysis and machine intelligence 45(4), 4396–4415
+    (2022)
+
+=== PDF PAGE 19 ===
+     Wavelet-Driven Consistency for Mixed-Supervised Tumor Segmentation     19
+
+
+45. Zhou, Y., Huang, J., Wang, C., Song, L., Yang, G.: Xnet: Wavelet-based low and
+    high frequency fusion networks for fully-and semi-supervised semantic segmenta-
+    tion of biomedical images. In: Proceedings of the IEEE/CVF International Con-
+    ference on Computer Vision. pp. 21085–21096 (2023)

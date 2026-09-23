@@ -1,0 +1,4263 @@
+[
+  {
+    "id": "transferability",
+    "short": "Transferability",
+    "number": "01",
+    "filename": "ECCV26_01_Transferability.pdf",
+    "title": "Transferability Between Understanding and Generation in Unified Multimodal Models",
+    "category": "Multimodal learning",
+    "task": "Capability transfer in unified models",
+    "color": "#b3a2de",
+    "position": [
+      100,
+      105
+    ],
+    "concepts": [
+      "multimodal",
+      "transfer",
+      "latent",
+      "diffusion"
+    ],
+    "sentence": {
+      "text": "Teach a unified model to understand a visual skill, and that skill can improve its image generation too.",
+      "source": {
+        "page": 2,
+        "label": "Introduction"
+      },
+      "kind": "Paper evidence"
+    },
+    "problem": {
+      "text": "A model can both understand and generate images without sharing useful capabilities between those tasks. Aggregate benchmark gains do not tell us whether teaching counting in one task actually improves counting in the other.",
+      "source": {
+        "page": 2,
+        "label": "Introduction"
+      },
+      "kind": "Paper evidence"
+    },
+    "core": [
+      {
+        "text": "The authors fine-tune only one task at a time, then test the same capability on the other. Four existing model families vary in how much of their transformer and visual encoding pathway is shared. Lumina-DiMOO, with a shared transformer and unified encoder, shows the strongest bidirectional counting transfer in this comparison.",
+        "source": {
+          "page": 5,
+          "label": "Fig. 1 & Table 1"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "They then exploit this effect: fine-tune understanding on skill-specific examples while keeping image generation as the test task. This can preserve the original visual distribution better than direct generation fine-tuning. The three probes are counting, diagonal spatial relations, and text recognition/generation; their gains differ.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 4; Tables 2–4 on pp. 8–11"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "io": {
+      "text": "Training uses capability-specific image/question/answer examples (or image–caption pairs in the generation control). At generation inference, a text prompt enters the adapted unified model and an image comes out.",
+      "source": {
+        "page": 5,
+        "label": "Sec. 3.1; continuation p. 6"
+      },
+      "kind": "Paper evidence"
+    },
+    "why": {
+      "text": "Sharing the representation gives an update learned through one objective a route to affect the other task. This is the authors’ interpretation of comparative experiments, not a proof that architectural sharing alone causes transfer.",
+      "source": {
+        "page": 7,
+        "label": "Sec. 3.2"
+      },
+      "kind": "Authors’ interpretation"
+    },
+    "caution": {
+      "text": "Architectural sharing is associated with stronger transfer here; it is not a universal guarantee. Even separately structured BAGEL and BLIP3-o improve understanding-to-generation counting in Table 1.",
+      "source": {
+        "page": 5,
+        "label": "Table 1"
+      },
+      "kind": "Paper evidence"
+    },
+    "novelty": [
+      {
+        "text": "A capability-matched intervention: train one task and test the same skill on the other, rather than infer transfer from aggregate scores.",
+        "source": {
+          "page": 2,
+          "label": "Introduction"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "An empirical comparison of transfer across four degrees of architectural coupling.",
+        "source": {
+          "page": 5,
+          "label": "Fig. 1 & Table 1"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Understanding-only post-training as a practical way to improve generation while limiting distribution shift.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 4"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "existing": {
+      "text": "Existing UMMs, visual tokenizers, transformers, autoregressive/diffusion generation, and LoRA are experimental machinery. The paper does not introduce a new image generator or sampler.",
+      "source": {
+        "page": 5,
+        "label": "Sec. 3.1"
+      },
+      "kind": "Paper evidence"
+    },
+    "stages": [
+      {
+        "label": "Skill examples",
+        "input": "Images and count questions",
+        "action": "Build matched understanding and generation training tasks.",
+        "why": "Test a specific capability rather than a broad benchmark average.",
+        "output": "VQA targets / image-caption control pairs",
+        "source": {
+          "page": 5,
+          "label": "Sec. 3.1"
+        },
+        "status": "Training data"
+      },
+      {
+        "label": "Frozen visual pathway",
+        "input": "Input image",
+        "action": "Encode images using the chosen pretrained UMM.",
+        "why": "Keep the non-transformer components fixed in the intervention.",
+        "output": "Visual tokens",
+        "source": {
+          "page": 25,
+          "label": "Appendix A"
+        },
+        "status": "Frozen"
+      },
+      {
+        "label": "Adapt the backbone",
+        "input": "Visual tokens and question",
+        "action": "Train LoRA in attention Q/K/V and MLP layers.",
+        "why": "Concentrate the intervention in the shared transformer.",
+        "output": "Updated adapter parameters",
+        "source": {
+          "page": 25,
+          "label": "Appendix A"
+        },
+        "status": "Trained"
+      },
+      {
+        "label": "Cross-task test",
+        "input": "Generation prompt",
+        "action": "Generate with the adapted model without generation supervision in this run.",
+        "why": "Measure whether understanding updates transfer.",
+        "output": "Generated image",
+        "source": {
+          "page": 6,
+          "label": "Sec. 3.1"
+        },
+        "status": "Inference"
+      },
+      {
+        "label": "Capability evaluation",
+        "input": "Generated images",
+        "action": "Check object count, layout, or OCR output; also assess distribution shift.",
+        "why": "Skill accuracy and visual preservation are different outcomes.",
+        "output": "Accuracy / MAD / OCR and distribution metrics",
+        "source": {
+          "page": 9,
+          "label": "Secs. 4.1–4.3"
+        },
+        "status": "Evaluation only"
+      }
+    ],
+    "training": [
+      {
+        "text": "Select a pretrained UMM; construct one capability-specific dataset per run.",
+        "source": {
+          "page": 25,
+          "label": "Appendix A"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Train rank-128 LoRA on transformer Q/K/V and MLP layers with the understanding objective. Separate control runs use generation supervision.",
+        "source": {
+          "page": 25,
+          "label": "Appendix A"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Image encoder, projector/aligner, language-model head and diffusion head stay frozen.",
+        "source": {
+          "page": 25,
+          "label": "Appendix A"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "inference": [
+      {
+        "text": "Supply a text-to-image prompt to the adapted UMM and use its original generation mechanism.",
+        "source": {
+          "page": 6,
+          "label": "Sec. 3.1"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "No VQA answers or counting annotations are supplied to generation. Detectors/OCR are used afterwards for evaluation.",
+        "source": {
+          "page": 6,
+          "label": "Sec. 3.1; p. 11 Sec. 4.3"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "results": [
+      {
+        "metric": "Counting accuracy (%)",
+        "dataset": "GenEval-style count prompts, Lumina-DiMOO",
+        "baseline": "Pretrained baseline",
+        "before": 48,
+        "after": 57,
+        "direction": "up",
+        "source": {
+          "page": 8,
+          "label": "Table 2"
+        },
+        "note": "Direct generation training also obtains 57%; the accuracy alone does not distinguish the two strategies.",
+        "proposed": null
+      },
+      {
+        "metric": "FID to baseline outputs",
+        "dataset": "Counting prompts, Lumina-DiMOO",
+        "baseline": "Direct generation training",
+        "before": 52.51,
+        "after": 31.47,
+        "direction": "down",
+        "source": {
+          "page": 8,
+          "label": "Table 2; definition p. 9"
+        },
+        "note": "This FID measures shift from baseline-generated images, not distance to a real-image dataset.",
+        "proposed": "Understanding → generation"
+      },
+      {
+        "metric": "Spatial accuracy (%)",
+        "dataset": "Synthetic diagonal-relation prompts",
+        "baseline": "Direct generation training",
+        "before": 80,
+        "after": 74,
+        "direction": "up",
+        "source": {
+          "page": 10,
+          "label": "Table 3"
+        },
+        "note": "Understanding transfer has lower task accuracy here, although its FID to baseline is slightly lower.",
+        "proposed": "Understanding → generation"
+      }
+    ],
+    "limitations": [
+      {
+        "text": "Only four representative architectural families are tested in the main analysis; architecture alone does not explain the direction or strength of transfer.",
+        "source": {
+          "page": 42,
+          "label": "Appendix E"
+        },
+        "kind": "Authors’ limitation"
+      },
+      {
+        "text": "Text transfer is weaker on several measures, and the best direction cannot yet be predicted in advance.",
+        "source": {
+          "page": 42,
+          "label": "Appendix E"
+        },
+        "kind": "Authors’ limitation"
+      }
+    ],
+    "equations": [],
+    "equationNote": "This paper’s key contribution is an experimental intervention, not a new mathematical objective. Read the architecture comparison and the train → test controls first.",
+    "dimensions": [
+      {
+        "id": "training",
+        "role": "Enabling setup",
+        "text": "LoRA adapts only part of the model. No end-to-end training speedup is established by the transfer results.",
+        "source": {
+          "page": 25,
+          "label": "Appendix A"
+        }
+      },
+      {
+        "id": "generalization",
+        "role": "Primary contribution",
+        "text": "Cross-task capability transfer and preservation of the baseline generation distribution.",
+        "source": {
+          "page": 8,
+          "label": "Table 2"
+        }
+      }
+    ],
+    "takeaway": "Shared machinery can make understanding supervision useful for generation; the strength depends on the skill.",
+    "comparison": {
+      "domain": {
+        "text": "General image understanding and generation",
+        "source": {
+          "page": 1,
+          "label": "Abstract"
+        },
+        "kind": "Paper evidence"
+      },
+      "architecture": {
+        "text": "Four 7B–8B UMMs: Lumina-DiMOO, Janus-Pro, BAGEL, BLIP3-o",
+        "source": {
+          "page": 5,
+          "label": "Sec. 3.1"
+        },
+        "kind": "Paper evidence"
+      },
+      "objective": {
+        "text": "Task-specific LoRA supervised fine-tuning; separate understanding and generation runs",
+        "source": {
+          "page": 25,
+          "label": "Appendix A"
+        },
+        "kind": "Paper evidence"
+      },
+      "generative": {
+        "text": "Existing autoregressive and discrete/continuous diffusion UMMs",
+        "source": {
+          "page": 3,
+          "label": "Sec. 2.1"
+        },
+        "kind": "Paper evidence"
+      },
+      "flow": {
+        "text": "Diffusion is part of existing UMMs; no new flow sampler",
+        "source": {
+          "page": 3,
+          "label": "Sec. 2.1"
+        },
+        "kind": "Paper evidence"
+      },
+      "frequency": {
+        "text": "No wavelet method introduced",
+        "source": {
+          "page": 3,
+          "label": "Sec. 2.1"
+        },
+        "kind": "Paper evidence"
+      },
+      "trainingCost": {
+        "text": "LoRA rank 128, frozen non-backbone components; speedup not reported",
+        "source": {
+          "page": 25,
+          "label": "Appendix A"
+        },
+        "kind": "Paper evidence"
+      },
+      "inferenceCost": {
+        "text": "Original UMM generation procedure; inference speedup not reported",
+        "source": {
+          "page": 6,
+          "label": "Sec. 3.1"
+        },
+        "kind": "Paper evidence"
+      },
+      "supervision": {
+        "text": "Counting VQA; synthetic spatial and rendered-text examples",
+        "source": {
+          "page": 9,
+          "label": "Secs. 4.2–4.3"
+        },
+        "kind": "Paper evidence"
+      },
+      "modality": {
+        "text": "Not a medical-imaging study",
+        "source": {
+          "page": 1,
+          "label": "Abstract"
+        },
+        "kind": "Paper evidence"
+      },
+      "datasets": {
+        "text": "PixMo-Points/Count; ImageNet-derived spatial pairs; rendered Markdown text",
+        "source": {
+          "page": 5,
+          "label": "Sec. 3.1; pp. 9, 11"
+        },
+        "kind": "Paper evidence"
+      },
+      "metrics": {
+        "text": "Accuracy, MAD, IS, FID to baseline; OCR WER/CER and text metrics",
+        "source": {
+          "page": 8,
+          "label": "Tables 2–4"
+        },
+        "kind": "Paper evidence"
+      },
+      "input": {
+        "text": "Generation: text prompt. Understanding: image and question.",
+        "source": {
+          "page": 5,
+          "label": "Sec. 3.1; continuation p. 6"
+        },
+        "kind": "Paper evidence"
+      },
+      "output": {
+        "text": "Generated image or textual answer, depending on the task.",
+        "source": {
+          "page": 5,
+          "label": "Sec. 3.1; continuation p. 6"
+        },
+        "kind": "Paper evidence"
+      }
+    },
+    "questions": [
+      {
+        "level": "Basic",
+        "question": "What problem does Transferability address?",
+        "hint": "Name the task and the obstacle, before naming the method.",
+        "answer": "A model can both understand and generate images without sharing useful capabilities between those tasks. Aggregate benchmark gains do not tell us whether teaching counting in one task actually improves counting in the other.",
+        "source": {
+          "page": 2,
+          "label": "Introduction"
+        }
+      },
+      {
+        "level": "Basic",
+        "question": "What is the central idea of Transferability?",
+        "hint": "Try explaining it without an acronym.",
+        "answer": "Teach a unified model to understand a visual skill, and that skill can improve its image generation too.",
+        "source": {
+          "page": 2,
+          "label": "Introduction"
+        }
+      },
+      {
+        "level": "Basic",
+        "question": "What goes in and what comes out of Transferability?",
+        "hint": "Distinguish the deployment inputs from training supervision.",
+        "answer": "Training uses capability-specific image/question/answer examples (or image–caption pairs in the generation control). At generation inference, a text prompt enters the adapted unified model and an image comes out.",
+        "source": {
+          "page": 5,
+          "label": "Sec. 3.1; continuation p. 6"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "Which parameters are adapted, and which stay frozen?",
+        "hint": "The intervention is centered on the transformer.",
+        "answer": "LoRA is trained in attention Q/K/V and MLP layers. Image encoder, projector/aligner, language modeling head, and diffusion head are frozen.",
+        "source": {
+          "page": 25,
+          "label": "Appendix A"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "What does the FID in the counting experiment measure?",
+        "hint": "Check which distribution acts as the reference.",
+        "answer": "It compares images from a fine-tuned model with images generated by the baseline. It measures distribution shift here, not real-data fidelity.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 4.1"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "Does every architecture show bidirectional counting transfer?",
+        "hint": "Compare both halves of Table 1.",
+        "answer": "No. Lumina-DiMOO is strongest in both directions. Janus-Pro loses generation accuracy after understanding training; the two directions are not interchangeable.",
+        "source": {
+          "page": 5,
+          "label": "Table 1"
+        }
+      },
+      {
+        "level": "Reasoning",
+        "question": "Why is a higher generation score insufficient to prove cross-task transfer?",
+        "hint": "Ask what was trained and what was tested.",
+        "answer": "A gain could come from direct generation supervision or unrelated extra data. The matched-capability intervention trains only the other task before measuring that capability.",
+        "source": {
+          "page": 2,
+          "label": "Introduction"
+        }
+      },
+      {
+        "level": "Reasoning",
+        "question": "How does this differ from changing a tokenizer, as in DeBaT?",
+        "hint": "Locate the intervention in the pipeline.",
+        "answer": "Here pretrained UMM backbones are adapted through a different task objective while the visual encoder stays frozen. DeBaT changes how visual detail is encoded; it is a representation-learning intervention.",
+        "source": {
+          "page": 25,
+          "label": "Appendix A"
+        }
+      }
+    ]
+  },
+  {
+    "id": "sphere",
+    "short": "SPHERE",
+    "number": "02",
+    "filename": "ECCV26_02_SPHERE.pdf",
+    "title": "SPHERE: From MRI Sampling Mechanisms to Spatial Priors for Generalizable Brain Tumor Segmentation",
+    "category": "Generalization",
+    "task": "Brain tumor MRI segmentation",
+    "color": "#8cbdac",
+    "position": [
+      900,
+      385
+    ],
+    "concepts": [
+      "mri",
+      "segmentation",
+      "kspace",
+      "dvf",
+      "generalization",
+      "physics"
+    ],
+    "sentence": {
+      "text": "Estimate how an MRI was sampled, turn that estimate into a spatial prior, and use it to guide tumor segmentation.",
+      "source": {
+        "page": 1,
+        "label": "Abstract"
+      },
+      "kind": "Paper evidence"
+    },
+    "problem": {
+      "text": "MRI acquisition changes which spatial frequencies survive reconstruction. Segmentation models trained only on image appearance can be brittle across scanners, while common segmentation datasets lack the original sampling metadata.",
+      "source": {
+        "page": 2,
+        "label": "Introduction"
+      },
+      "kind": "Paper evidence"
+    },
+    "core": [
+      {
+        "text": "SPHERE-Recover learns from reconstructed images paired with DICOM acquisition metadata. A spatial ViT branch and an FFT-based frequency branch predict sampling dimensions, ratios, and direction. This lets the method estimate sampling-related parameters when headers are unavailable.",
+        "source": {
+          "page": 6,
+          "label": "Sec. 3.1"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "The estimated parameters define a simulated sampling operator. Comparing the original and perturbed image yields a smooth deformation vector field (DVF). SPHERE-Seg uses this field to align features and modulate retention in its Swin-RetNet encoder–decoder.",
+        "source": {
+          "page": 7,
+          "label": "Secs. 3.2–3.3"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "io": {
+      "text": "Reconstructed MRI enters parameter recovery and DVF preprocessing; MRI plus DVF enter SPHERE-Seg; tumor-region masks come out. DICOM metadata supervises recovery training but is not required at deployment.",
+      "source": {
+        "page": 9,
+        "label": "Sec. 3.3; p. 14 complexity"
+      },
+      "kind": "Paper evidence"
+    },
+    "why": {
+      "text": "A spatially organized prior can tell the segmentation network where acquisition-related perturbations affect structure. Shuffling DVFs worsens performance, supporting the value of their spatial organization.",
+      "source": {
+        "page": 12,
+        "label": "Sec. 4.5"
+      },
+      "kind": "Paper evidence"
+    },
+    "caution": {
+      "text": "The DVF is explicitly not an exact physical deformation caused by acquisition. “Sampling” here means MRI k-space acquisition, not drawing an image from a generative model.",
+      "source": {
+        "page": 7,
+        "label": "Sec. 3.2"
+      },
+      "kind": "Paper evidence"
+    },
+    "novelty": [
+      {
+        "text": "Recover sampling-related geometry from reconstructed MRI using spatial and frequency features.",
+        "source": {
+          "page": 6,
+          "label": "Sec. 3.1"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Convert estimated acquisition conditions into a continuous, segmentation-relevant deformation prior.",
+        "source": {
+          "page": 7,
+          "label": "Sec. 3.2"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Inject the DVF through feature warping and deformation-modulated retention in DPM.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.3"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "existing": {
+      "text": "FFT, ViT features, U-shaped encoder–decoders, sliding-window attention, retention, and differentiable warping are building blocks. The recovery → DVF → segmentation linkage is the central contribution.",
+      "source": {
+        "page": 4,
+        "label": "Secs. 2.2–3"
+      },
+      "kind": "Paper evidence"
+    },
+    "stages": [
+      {
+        "label": "MRI image",
+        "input": "Reconstructed MRI",
+        "action": "Send the image to spatial and frequency feature branches.",
+        "why": "Segmentation datasets often lack raw acquisition parameters.",
+        "output": "ViT features and real/imaginary FFT features",
+        "source": {
+          "page": 6,
+          "label": "Sec. 3.1"
+        },
+        "status": "Input"
+      },
+      {
+        "label": "SPHERE-Recover",
+        "input": "Spatial and frequency features",
+        "action": "Concatenate features and predict acquisition parameters with an MLP.",
+        "why": "Estimate missing sampling information from the image.",
+        "output": "Estimated parameter vector",
+        "source": {
+          "page": 6,
+          "label": "Sec. 3.1"
+        },
+        "status": "Preprocessing at inference"
+      },
+      {
+        "label": "Construct DVF",
+        "input": "Image and estimated sampling parameters",
+        "action": "Simulate a sampled image and solve a smooth brightness-alignment problem.",
+        "why": "Express the structural perturbation as a usable spatial field.",
+        "output": "Continuous displacement field",
+        "source": {
+          "page": 7,
+          "label": "Sec. 3.2"
+        },
+        "status": "Preprocessing at inference"
+      },
+      {
+        "label": "DPM",
+        "input": "Multiscale features and resized DVF",
+        "action": "Warp features and modulate retention using deformation magnitude.",
+        "why": "Align structure and guide information aggregation.",
+        "output": "Updated features and aligned skip connections",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.3"
+        },
+        "status": "Trained"
+      },
+      {
+        "label": "Segmentation decoder",
+        "input": "Enhanced multiscale features",
+        "action": "Decode tumor-region predictions.",
+        "why": "Produce the actual downstream output.",
+        "output": "Tumor masks",
+        "source": {
+          "page": 5,
+          "label": "Fig. 3"
+        },
+        "status": "Trained"
+      }
+    ],
+    "training": [
+      {
+        "text": "Train SPHERE-Recover on MRI BRP images with DICOM-derived parameters: regression MSE plus direction cross-entropy.",
+        "source": {
+          "page": 6,
+          "label": "Sec. 3.1; dataset p. 9"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Train SPHERE-Seg with recovered DVFs and tumor masks on BraTS 2023. Segmentation loss weights Dice:BCE at 2:8.",
+        "source": {
+          "page": 10,
+          "label": "Sec. 4.2"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Recovery and segmentation have separate supervision. The paper does not explicitly document a joint end-to-end freeze schedule.",
+        "source": {
+          "page": 6,
+          "label": "Sec. 3.1; p. 10 Sec. 4.2"
+        },
+        "kind": "Reading boundary"
+      }
+    ],
+    "inference": [
+      {
+        "text": "Recover parameters from the reconstructed MRI and generate the DVF in preprocessing. No DICOM header is needed.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.3"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "SPHERE-Seg consumes the image and prepared DVF. Reported segmentation cost excludes the recovery preprocessing model.",
+        "source": {
+          "page": 14,
+          "label": "Complexity analysis"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "results": [
+      {
+        "metric": "Average Dice (%)",
+        "dataset": "BraTS 2019, trained on BraTS 2023",
+        "baseline": "Base, no prior",
+        "before": 89.79,
+        "after": 91.27,
+        "direction": "up",
+        "source": {
+          "page": 13,
+          "label": "Table 6"
+        },
+        "note": "Cross-dataset ablation of the complete prior and fusion system.",
+        "proposed": null
+      },
+      {
+        "metric": "Average Dice (%)",
+        "dataset": "BraTS 2023, in-domain",
+        "baseline": "Base, no prior",
+        "before": 92.25,
+        "after": 92.87,
+        "direction": "up",
+        "source": {
+          "page": 13,
+          "label": "Table 6"
+        },
+        "note": "The in-domain gain is smaller than the cross-dataset gain.",
+        "proposed": null
+      },
+      {
+        "metric": "Parameters (M)",
+        "dataset": "Segmentation models in reported comparison",
+        "baseline": "Swin UNETR",
+        "before": 25.11,
+        "after": 14.88,
+        "direction": "down",
+        "source": {
+          "page": 14,
+          "label": "Complexity analysis"
+        },
+        "note": "SPHERE-Seg only. SPHERE-Recover and DVF preprocessing are not included in this count.",
+        "proposed": null
+      }
+    ],
+    "limitations": [
+      {
+        "text": "The deformation field captures segmentation-relevant variations, rather than an exact acquisition-induced physical warp.",
+        "source": {
+          "page": 7,
+          "label": "Sec. 3.2"
+        },
+        "kind": "Authors’ qualification"
+      },
+      {
+        "text": "Recovery supervision uses 351 MRI BRP slices; deployment still needs recovery and DVF preprocessing even though their cost is excluded from SPHERE-Seg figures.",
+        "source": {
+          "page": 9,
+          "label": "Table 2; p. 14"
+        },
+        "kind": "Scope of evidence"
+      }
+    ],
+    "equations": [
+      {
+        "title": "From sampling to an artifact map",
+        "latex": "\\widetilde I=\\mathcal F^{-1}(\\mathcal M_\\theta\\odot\\mathcal F(I)),\\qquad A(\\mathbf x)=|I(\\mathbf x)-\\widetilde I(\\mathbf x)|",
+        "symbols": [
+          "I: reconstructed input MRI; Ĩ: simulated sampled image",
+          "ℱ and ℱ⁻¹: Fourier transform and inverse",
+          "ℳθ: sampling operator set by estimated parameters θ; ⊙: elementwise product",
+          "x: spatial position; A: artifact magnitude"
+        ],
+        "plain": "Apply the estimated sampling pattern in frequency space, reconstruct, then compare the two images.",
+        "why": "This constructs an acquisition-related disturbance before the smooth DVF is estimated. A is an intermediate, not the final DVF.",
+        "source": {
+          "page": 7,
+          "label": "Eqs. 10–11"
+        }
+      }
+    ],
+    "dimensions": [
+      {
+        "id": "backbone",
+        "role": "Measured, scoped",
+        "text": "14.88M parameters and 44.28G FLOPs for SPHERE-Seg; recovery preprocessing is excluded.",
+        "source": {
+          "page": 14,
+          "label": "Complexity analysis"
+        }
+      },
+      {
+        "id": "generalization",
+        "role": "Primary contribution",
+        "text": "Train on BraTS 2023; evaluate also on BraTS 2019 and MSD.",
+        "source": {
+          "page": 14,
+          "label": "Table 7"
+        }
+      },
+      {
+        "id": "medical",
+        "role": "Application",
+        "text": "MRI brain tumor segmentation with acquisition-aware structural priors.",
+        "source": {
+          "page": 1,
+          "label": "Abstract"
+        }
+      }
+    ],
+    "takeaway": "Recover acquisition information, then use it as a spatial prior—not as literal tissue motion.",
+    "comparison": {
+      "domain": {
+        "text": "Medical image segmentation",
+        "source": {
+          "page": 1,
+          "label": "Abstract"
+        },
+        "kind": "Paper evidence"
+      },
+      "architecture": {
+        "text": "Spatial ViT + FFT recovery model; Swin-RetNet U-shaped segmenter with DPM",
+        "source": {
+          "page": 5,
+          "label": "Fig. 3"
+        },
+        "kind": "Paper evidence"
+      },
+      "objective": {
+        "text": "Recovery: MSE + cross-entropy; segmentation: Dice + BCE, weights 2:8",
+        "source": {
+          "page": 6,
+          "label": "Sec. 3.1; p. 10 Sec. 4.2"
+        },
+        "kind": "Paper evidence"
+      },
+      "generative": {
+        "text": "Not a generative model",
+        "source": {
+          "page": 5,
+          "label": "Fig. 3"
+        },
+        "kind": "Paper evidence"
+      },
+      "flow": {
+        "text": "No generative flow or diffusion sampler; DVF is a structural prior",
+        "source": {
+          "page": 7,
+          "label": "Sec. 3.2"
+        },
+        "kind": "Paper evidence"
+      },
+      "frequency": {
+        "text": "FFT and k-space sampling simulation, not a wavelet tokenizer",
+        "source": {
+          "page": 7,
+          "label": "Eq. 10"
+        },
+        "kind": "Paper evidence"
+      },
+      "trainingCost": {
+        "text": "Separate recovery supervision; ImageNet-pretrained ViT, 300-epoch segmentation setup",
+        "source": {
+          "page": 10,
+          "label": "Sec. 4.2"
+        },
+        "kind": "Paper evidence"
+      },
+      "inferenceCost": {
+        "text": "14.88M / 44.28G for SPHERE-Seg, excluding recovery preprocessing",
+        "source": {
+          "page": 14,
+          "label": "Complexity analysis"
+        },
+        "kind": "Paper evidence"
+      },
+      "supervision": {
+        "text": "DICOM metadata for recovery; tumor masks for segmentation",
+        "source": {
+          "page": 9,
+          "label": "Sec. 4.1"
+        },
+        "kind": "Paper evidence"
+      },
+      "modality": {
+        "text": "Brain MRI: T1, contrast-enhanced T1, T2, FLAIR",
+        "source": {
+          "page": 9,
+          "label": "Table 2"
+        },
+        "kind": "Paper evidence"
+      },
+      "datasets": {
+        "text": "MRI BRP; BraTS 2019/2023; MSD Task01",
+        "source": {
+          "page": 9,
+          "label": "Table 2"
+        },
+        "kind": "Paper evidence"
+      },
+      "metrics": {
+        "text": "Dice, HD95; sampling MAE; DVF consistency",
+        "source": {
+          "page": 10,
+          "label": "Sec. 4.3"
+        },
+        "kind": "Paper evidence"
+      },
+      "input": {
+        "text": "Reconstructed MRI; recovered DVF supplied to the segmentation network after preprocessing.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.3; p. 14 complexity"
+        },
+        "kind": "Paper evidence"
+      },
+      "output": {
+        "text": "Brain tumor-region masks.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.3; p. 14 complexity"
+        },
+        "kind": "Paper evidence"
+      }
+    },
+    "questions": [
+      {
+        "level": "Basic",
+        "question": "What problem does SPHERE address?",
+        "hint": "Name the task and the obstacle, before naming the method.",
+        "answer": "MRI acquisition changes which spatial frequencies survive reconstruction. Segmentation models trained only on image appearance can be brittle across scanners, while common segmentation datasets lack the original sampling metadata.",
+        "source": {
+          "page": 2,
+          "label": "Introduction"
+        }
+      },
+      {
+        "level": "Basic",
+        "question": "What is the central idea of SPHERE?",
+        "hint": "Try explaining it without an acronym.",
+        "answer": "Estimate how an MRI was sampled, turn that estimate into a spatial prior, and use it to guide tumor segmentation.",
+        "source": {
+          "page": 1,
+          "label": "Abstract"
+        }
+      },
+      {
+        "level": "Basic",
+        "question": "What goes in and what comes out of SPHERE?",
+        "hint": "Distinguish the deployment inputs from training supervision.",
+        "answer": "Reconstructed MRI enters parameter recovery and DVF preprocessing; MRI plus DVF enter SPHERE-Seg; tumor-region masks come out. DICOM metadata supervises recovery training but is not required at deployment.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.3; p. 14 complexity"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "Why predict acquisition parameters if a tumor mask is the output?",
+        "hint": "The intermediate is a spatial prior.",
+        "answer": "The parameters drive simulated sampling and a DVF. DPM uses that field to guide feature alignment and retention for segmentation.",
+        "source": {
+          "page": 5,
+          "label": "Fig. 3"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "Are DICOM headers needed at inference?",
+        "hint": "Separate supervision from deployment.",
+        "answer": "No. They supervise SPHERE-Recover during training; reconstructed images are sufficient for parameter recovery and DVF preprocessing at inference.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.3"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "Is the DVF an exact physical deformation?",
+        "hint": "Read the explicit qualification in Sec. 3.2.",
+        "answer": "No. It captures segmentation-relevant structural perturbations; aliasing and blur are not necessarily literal spatial deformation.",
+        "source": {
+          "page": 7,
+          "label": "Sec. 3.2"
+        }
+      },
+      {
+        "level": "Reasoning",
+        "question": "Does SPHERE accelerate the same sampling process as ParaFlow?",
+        "hint": "The word sampling has two meanings.",
+        "answer": "No. SPHERE models k-space acquisition sampling. ParaFlow parallelizes ODE steps of a pretrained generative model.",
+        "source": {
+          "page": 3,
+          "label": "Sec. 2.1"
+        }
+      },
+      {
+        "level": "Reasoning",
+        "question": "Can you interpret the reported segmentation FLOPs as complete pipeline cost?",
+        "hint": "Look for the preprocessing exclusion.",
+        "answer": "No. The quoted 44.28G FLOPs belong to SPHERE-Seg; SPHERE-Recover runs in preprocessing to produce the prior.",
+        "source": {
+          "page": 14,
+          "label": "Complexity analysis"
+        }
+      }
+    ]
+  },
+  {
+    "id": "pdf",
+    "short": "PDF",
+    "number": "03",
+    "filename": "ECCV26_03_PhysicsGroundedFlow.pdf",
+    "title": "Physics-Grounded Disentangled Flow Modeling for Brain Disease Progression Trajectory",
+    "category": "Medical generation",
+    "task": "Longitudinal brain MRI forecasting",
+    "color": "#c9b07d",
+    "position": [
+      510,
+      385
+    ],
+    "concepts": [
+      "flow",
+      "mri",
+      "physics",
+      "fisher",
+      "pde",
+      "dvf",
+      "frequency",
+      "psnr",
+      "dice"
+    ],
+    "sentence": {
+      "text": "Predict how a lesion changes shape first, then how the MRI appearance changes, with a soft physics constraint on lesion evolution.",
+      "source": {
+        "page": 2,
+        "label": "Introduction"
+      },
+      "kind": "Paper evidence"
+    },
+    "problem": {
+      "text": "Directly predicting a future MRI entangles structural changes with intensity changes. Limited longitudinal data, irregular scan intervals, and protocol variation make that mapping difficult to interpret and generalize.",
+      "source": {
+        "page": 2,
+        "label": "Introduction"
+      },
+      "kind": "Paper evidence"
+    },
+    "core": [
+      {
+        "text": "Two flow-matching networks divide the work. The morphology network predicts lesion evolution conditioned on the baseline image and elapsed time. At inference, optical flow between baseline and predicted masks supplies a deformation field that warps the baseline image.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.2; inference p. 9"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "The intensity network refines that warped image. During morphology training, a PDE-inspired penalty discourages velocity components outside a diffusion–reaction–advection span. The concentration maps used to form that span are smooth transforms of binary masks, not measured cell densities.",
+        "source": {
+          "page": 7,
+          "label": "Eqs. 11–13; map construction p. 10"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "io": {
+      "text": "Baseline MRI, its lesion mask, and the desired time interval enter the forecasting pipeline. It predicts an evolved lesion and a future MRI image. Follow-up images and masks are training supervision, not inference inputs.",
+      "source": {
+        "page": 9,
+        "label": "Inference"
+      },
+      "kind": "Paper evidence"
+    },
+    "why": {
+      "text": "Separating geometry from intensity gives each network a simpler role. The physics penalty adds a preference for structured evolution rather than unconstrained changes. Ablations test the two components and the regularizer separately.",
+      "source": {
+        "page": 13,
+        "label": "Sec. 4.3; Table 3 p. 14"
+      },
+      "kind": "Paper evidence"
+    },
+    "caution": {
+      "text": "The PDE is a regularization constraint, not an exact biological simulator embedded in the generator. Mask-derived concentration is a proxy; two flow models also add computation.",
+      "source": {
+        "page": 23,
+        "label": "Appendix E.1; map definition p. 10"
+      },
+      "kind": "Paper evidence"
+    },
+    "novelty": [
+      {
+        "text": "Separate morphology evolution and intensity evolution with dedicated flow-matching models.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.2"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Regularize morphology velocity using its residual after projection onto a diffusion–reaction–advection span.",
+        "source": {
+          "page": 7,
+          "label": "Eqs. 11–13"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Compose predicted lesion motion, baseline-image warping, and appearance refinement into longitudinal forecasting.",
+        "source": {
+          "page": 9,
+          "label": "Inference"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "existing": {
+      "text": "U-Net backbones, flow matching, Fisher-KPP-inspired dynamics, TV-L1 optical flow, and image warping are reused. The contribution is their disentangled forecasting formulation and projection regularizer.",
+      "source": {
+        "page": 9,
+        "label": "Sec. 3.2; p. 10 Implementation"
+      },
+      "kind": "Paper evidence"
+    },
+    "stages": [
+      {
+        "label": "Baseline + horizon",
+        "input": "Baseline image, lesion mask, and elapsed time",
+        "action": "Condition the morphology model on anatomy and the requested interval.",
+        "why": "Forecast progression from a known observation.",
+        "output": "Morphological velocity",
+        "source": {
+          "page": 8,
+          "label": "Eq. 14"
+        },
+        "status": "Trained"
+      },
+      {
+        "label": "Lesion evolution",
+        "input": "Morphological velocity",
+        "action": "Integrate over the time interval to predict the future lesion.",
+        "why": "Separate structural evolution from appearance.",
+        "output": "Predicted lesion mask",
+        "source": {
+          "page": 9,
+          "label": "Inference"
+        },
+        "status": "Inference"
+      },
+      {
+        "label": "Structural warp",
+        "input": "Baseline and predicted lesion masks",
+        "action": "Estimate TV-L1 displacement, then warp the baseline image.",
+        "why": "Move the structure before changing signal intensity.",
+        "output": "Morphology-warped MRI",
+        "source": {
+          "page": 9,
+          "label": "Eqs. 20–21"
+        },
+        "status": "Nonlearned optical flow"
+      },
+      {
+        "label": "Intensity refinement",
+        "input": "Warped image and baseline lesion conditioning",
+        "action": "Integrate the learned intensity velocity.",
+        "why": "Capture signal changes that a spatial warp cannot express.",
+        "output": "Refined future image",
+        "source": {
+          "page": 9,
+          "label": "Inference"
+        },
+        "status": "Trained"
+      },
+      {
+        "label": "Texture preservation",
+        "input": "Baseline lesion texture and refined image",
+        "action": "Add high-frequency guidance extracted using Difference-of-Gaussians.",
+        "why": "Preserve lesion-specific texture details.",
+        "output": "Final predicted MRI",
+        "source": {
+          "page": 22,
+          "label": "Appendix D"
+        },
+        "status": "Inference"
+      }
+    ],
+    "training": [
+      {
+        "text": "Use longitudinal image/mask pairs and their time interval. Convert masks through signed distance and sigmoid to concentration proxies.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.2; p. 10 map construction"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Fit diffusion/reaction terms and estimate transport to form the physics span. Train morphology with flow matching plus λ times projection-residual loss.",
+        "source": {
+          "page": 6,
+          "label": "Sec. 3.1.2; p. 8 Eq. 17"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Train intensity flow in image space with a flow-matching objective conditioned on lesion information.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.2; p. 9 Eq. 19"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "inference": [
+      {
+        "text": "Require the baseline lesion mask as well as the baseline image and time interval. Predict the evolved lesion, estimate optical flow, and warp the image.",
+        "source": {
+          "page": 9,
+          "label": "Inference"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Refine intensity and preserve baseline lesion texture. The PDE loss and follow-up ground truth are not inference inputs.",
+        "source": {
+          "page": 9,
+          "label": "Inference; p. 22 Appendix D"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "results": [
+      {
+        "metric": "DSC",
+        "dataset": "UCSF tumor progression",
+        "baseline": "T-UNet",
+        "before": 0.728,
+        "after": 0.752,
+        "direction": "up",
+        "source": {
+          "page": 12,
+          "label": "Table 1"
+        },
+        "note": "Lesion-level agreement improves; the same comparison has a lower image PSNR.",
+        "proposed": null
+      },
+      {
+        "metric": "PSNR (dB)",
+        "dataset": "UCSF tumor progression",
+        "baseline": "T-UNet",
+        "before": 31.739,
+        "after": 31.364,
+        "direction": "up",
+        "source": {
+          "page": 12,
+          "label": "Table 1"
+        },
+        "note": "A counter-result: better lesion progression does not imply better whole-image PSNR.",
+        "proposed": null
+      },
+      {
+        "metric": "DSC",
+        "dataset": "LMSLS, PDE regularizer ablation",
+        "baseline": "Without PDE loss",
+        "before": 0.69,
+        "after": 0.696,
+        "direction": "up",
+        "source": {
+          "page": 14,
+          "label": "Table 3"
+        },
+        "note": "The controlled gain from the regularizer is modest; do not attribute all performance to physics.",
+        "proposed": null
+      }
+    ],
+    "limitations": [
+      {
+        "text": "Baseline lesion masks are required; segmentation errors can propagate into both predicted morphology and future images.",
+        "source": {
+          "page": 23,
+          "label": "Appendix E.1"
+        },
+        "kind": "Authors’ limitation"
+      },
+      {
+        "text": "Two separate flow models add overhead; the physics currently guides learning through a regularizer.",
+        "source": {
+          "page": 23,
+          "label": "Appendix E.1"
+        },
+        "kind": "Authors’ limitation"
+      },
+      {
+        "text": "LUMIERE full-model PSNR differs between Table 1 (37.216) and the joint row of Table 2 (37.075). The atlas does not silently merge these values.",
+        "source": {
+          "page": 12,
+          "label": "Table 1; Table 2 p. 13"
+        },
+        "kind": "Source inconsistency"
+      }
+    ],
+    "equations": [
+      {
+        "title": "The physics-inspired dynamics",
+        "latex": "\\frac{\\partial c}{\\partial t}=D\\Delta c+\\rho c(1-c)-\\mathbf u\\cdot\\nabla c",
+        "symbols": [
+          "c(x,t): normalized lesion concentration proxy; x: location; t: time",
+          "D: diffusion coefficient; Δ: spatial Laplacian",
+          "ρ: reaction/proliferation rate; u: advection velocity field",
+          "∇: spatial gradient; ·: dot product"
+        ],
+        "plain": "Spread out, grow locally, and move through space. These are three different ways the concentration can change.",
+        "why": "These terms define the physics span used by the regularizer; the paper does not solve an exact patient-specific biological model at deployment.",
+        "source": {
+          "page": 5,
+          "label": "Eq. 2"
+        }
+      },
+      {
+        "title": "Penalize what the physics span cannot explain",
+        "latex": "\\mathcal L_{\\mathrm{PDE}}=\\|v_\\theta-\\Pi_{\\mathcal S}(v_\\theta)\\|_2^2",
+        "symbols": [
+          "vθ: predicted morphology velocity; θ: learned network parameters",
+          "S: span of Δc, c(1−c), and −u·∇c evaluated using baseline quantities",
+          "ΠS: least-squares projection onto that span",
+          "‖·‖₂²: squared Euclidean norm"
+        ],
+        "plain": "Project the prediction onto the three physics-inspired components, then penalize the part left over.",
+        "why": "This is a soft preference for physics-compatible motion, not an equality constraint requiring exact PDE solutions.",
+        "source": {
+          "page": 7,
+          "label": "Eq. 13"
+        }
+      }
+    ],
+    "dimensions": [
+      {
+        "id": "medical",
+        "role": "Primary contribution",
+        "text": "Forecast longitudinal MRI progression across tumor and MS cohorts.",
+        "source": {
+          "page": 12,
+          "label": "Table 1"
+        }
+      },
+      {
+        "id": "training",
+        "role": "Added cost",
+        "text": "Two flow models and a PDE projection regularizer; this is not demonstrated training acceleration.",
+        "source": {
+          "page": 23,
+          "label": "Appendix E.1"
+        }
+      }
+    ],
+    "takeaway": "Move the lesion, then change the signal. Physics narrows the learned behavior without certifying biology.",
+    "comparison": {
+      "domain": {
+        "text": "Longitudinal brain disease forecasting",
+        "source": {
+          "page": 1,
+          "label": "Abstract"
+        },
+        "kind": "Paper evidence"
+      },
+      "architecture": {
+        "text": "Two U-Net flow-matching models plus TV-L1 optical flow and warping",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.2; p. 10 Implementation"
+        },
+        "kind": "Paper evidence"
+      },
+      "objective": {
+        "text": "Morphology FM + λ PDE projection loss; intensity FM",
+        "source": {
+          "page": 8,
+          "label": "Eqs. 16–19"
+        },
+        "kind": "Paper evidence"
+      },
+      "generative": {
+        "text": "Disentangled morphology and intensity flow matching",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.2"
+        },
+        "kind": "Paper evidence"
+      },
+      "flow": {
+        "text": "Two learned flow fields; structural optical flow is a separate operation",
+        "source": {
+          "page": 9,
+          "label": "Inference"
+        },
+        "kind": "Paper evidence"
+      },
+      "frequency": {
+        "text": "Difference-of-Gaussians baseline lesion-texture guidance; no Haar transform",
+        "source": {
+          "page": 22,
+          "label": "Appendix D"
+        },
+        "kind": "Paper evidence"
+      },
+      "trainingCost": {
+        "text": "Two models add overhead; PDE terms fitted from paired observations",
+        "source": {
+          "page": 23,
+          "label": "Appendix E.1"
+        },
+        "kind": "Paper evidence"
+      },
+      "inferenceCost": {
+        "text": "Morphology integration → optical-flow warp → intensity integration; speedup not reported",
+        "source": {
+          "page": 9,
+          "label": "Inference"
+        },
+        "kind": "Paper evidence"
+      },
+      "supervision": {
+        "text": "Longitudinal image/mask pairs; baseline mask also needed at inference",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.2"
+        },
+        "kind": "Paper evidence"
+      },
+      "modality": {
+        "text": "T1 / contrast-enhanced T1 / FLAIR MRI",
+        "source": {
+          "page": 10,
+          "label": "Datasets"
+        },
+        "kind": "Paper evidence"
+      },
+      "datasets": {
+        "text": "UCSF-ALPTDG, LUMIERE, LMSLS",
+        "source": {
+          "page": 10,
+          "label": "Datasets"
+        },
+        "kind": "Paper evidence"
+      },
+      "metrics": {
+        "text": "DSC, HD, PSNR, SSIM, L1; HD here is not HD95",
+        "source": {
+          "page": 10,
+          "label": "Evaluation metrics"
+        },
+        "kind": "Paper evidence"
+      },
+      "input": {
+        "text": "Baseline MRI, baseline lesion mask and desired time interval.",
+        "source": {
+          "page": 9,
+          "label": "Inference"
+        },
+        "kind": "Paper evidence"
+      },
+      "output": {
+        "text": "Predicted lesion evolution and a forecast future MRI.",
+        "source": {
+          "page": 9,
+          "label": "Inference"
+        },
+        "kind": "Paper evidence"
+      }
+    },
+    "questions": [
+      {
+        "level": "Basic",
+        "question": "What problem does PDF address?",
+        "hint": "Name the task and the obstacle, before naming the method.",
+        "answer": "Directly predicting a future MRI entangles structural changes with intensity changes. Limited longitudinal data, irregular scan intervals, and protocol variation make that mapping difficult to interpret and generalize.",
+        "source": {
+          "page": 2,
+          "label": "Introduction"
+        }
+      },
+      {
+        "level": "Basic",
+        "question": "What is the central idea of PDF?",
+        "hint": "Try explaining it without an acronym.",
+        "answer": "Predict how a lesion changes shape first, then how the MRI appearance changes, with a soft physics constraint on lesion evolution.",
+        "source": {
+          "page": 2,
+          "label": "Introduction"
+        }
+      },
+      {
+        "level": "Basic",
+        "question": "What goes in and what comes out of PDF?",
+        "hint": "Distinguish the deployment inputs from training supervision.",
+        "answer": "Baseline MRI, its lesion mask, and the desired time interval enter the forecasting pipeline. It predicts an evolved lesion and a future MRI image. Follow-up images and masks are training supervision, not inference inputs.",
+        "source": {
+          "page": 9,
+          "label": "Inference"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "What is the physics loss actually penalizing?",
+        "hint": "Think projection and residual.",
+        "answer": "The squared difference between predicted morphology velocity and its least-squares projection onto the diffusion–reaction–advection span.",
+        "source": {
+          "page": 7,
+          "label": "Eq. 13"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "Why is there optical flow after morphology prediction?",
+        "hint": "A lesion prediction is not yet a dense image warp.",
+        "answer": "Optical flow estimates a displacement aligning baseline and predicted lesion masks. That displacement warps the baseline MRI before intensity refinement.",
+        "source": {
+          "page": 9,
+          "label": "Eq. 20"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "What extra information is needed at inference?",
+        "hint": "The input is not just an MRI.",
+        "answer": "A baseline lesion mask and the desired time interval are required. Imperfect baseline masks are an acknowledged failure source.",
+        "source": {
+          "page": 23,
+          "label": "Appendix E.1"
+        }
+      },
+      {
+        "level": "Reasoning",
+        "question": "Does a lower PSNR prove worse progression modeling?",
+        "hint": "Compare image-level and lesion-level measurements.",
+        "answer": "No. On UCSF, PDF has lower PSNR than T-UNet but higher DSC and lower HD. Small lesion changes can be diluted in whole-image measurements.",
+        "source": {
+          "page": 12,
+          "label": "Table 1 & interpretation"
+        }
+      },
+      {
+        "level": "Reasoning",
+        "question": "Does the physics penalty make this an exact biological simulation?",
+        "hint": "Ask where the concentration and constraints come from.",
+        "answer": "No. Concentration is derived from masks and the PDE enters as a soft projection penalty. The authors explicitly describe the current dynamics as regularization.",
+        "source": {
+          "page": 23,
+          "label": "Appendix E.1"
+        }
+      }
+    ]
+  },
+  {
+    "id": "drift",
+    "short": "DRIFT",
+    "number": "04",
+    "filename": "ECCV26_04_DRIFT.pdf",
+    "title": "DRIFT: Difficulty-aware Rectified Flows for Through-plane MRI Super-Resolution",
+    "category": "Inference efficiency",
+    "task": "Through-plane MRI super-resolution",
+    "color": "#b8cc87",
+    "position": [
+      900,
+      105
+    ],
+    "concepts": [
+      "flow",
+      "rectified",
+      "ode",
+      "mri",
+      "thickness",
+      "frequency",
+      "nfe",
+      "psnr",
+      "ssim"
+    ],
+    "sentence": {
+      "text": "First make a coarse sharp-slice MRI estimate, then spend only the flow-refinement steps justified by the input slice thickness.",
+      "source": {
+        "page": 4,
+        "label": "Fig. 1"
+      },
+      "kind": "Paper evidence"
+    },
+    "problem": {
+      "text": "Thick-slice MRI loses through-plane detail. Fixed-scale models do not naturally handle continuous thickness changes, while iterative generative reconstruction can spend the same expensive step budget on both easy and hard inputs.",
+      "source": {
+        "page": 4,
+        "label": "Related work; p. 9 Sec. 3.6"
+      },
+      "kind": "Paper evidence"
+    },
+    "core": [
+      {
+        "text": "An Anatomical Projection Network (APN) learns a deterministic coarse reconstruction conditioned on input and target inverse slice thickness. Its output initializes a second, rectified-flow model. The second model learns the residual path toward the high-resolution target, rather than a path starting from random noise.",
+        "source": {
+          "page": 7,
+          "label": "Secs. 3.3–3.4"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "At inference, Physics-Aware Difficulty (PAD) converts the relative input/target thickness into a bandwidth-deficit cue. The Adaptive Integration Scheduler (AIS) uses that cue to choose an Euler-step budget. During training, CETA encourages nearby thickness conditions of the same anatomy to predict consistent endpoints.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.5; p. 9 Sec. 3.6"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "io": {
+      "text": "A thick-slice MRI volume, its input thickness, and a target thickness enter the system. Deterministic slice-wise APN + rectified-flow predictions are assembled into a super-resolved volume.",
+      "source": {
+        "page": 5,
+        "label": "Sec. 3; conditioning p. 6"
+      },
+      "kind": "Paper evidence"
+    },
+    "why": {
+      "text": "Starting from a stable anatomical estimate reduces the residual transport needed for detail recovery. Thickness is a metadata cue for missing bandwidth, so easier acquisitions need fewer refinements. Shared deterministic processing also encourages continuity across neighboring slices.",
+      "source": {
+        "page": 7,
+        "label": "Sec. 3.3; scheduler p. 9"
+      },
+      "kind": "Authors’ rationale"
+    },
+    "caution": {
+      "text": "PAD is a protocol-severity cue, not an image difficulty predictor. The main experiments fix each dataset’s target thickness; accepting a target embedding does not establish arbitrary target-resolution generalization.",
+      "source": {
+        "page": 6,
+        "label": "Sec. 3.2; p. 9 Sec. 3.6"
+      },
+      "kind": "Paper evidence"
+    },
+    "novelty": [
+      {
+        "text": "Specialize coarse-to-fine transport to through-plane MRI using SLR slice-profile degradation and inverse-thickness conditioning.",
+        "source": {
+          "page": 6,
+          "label": "Secs. 3.1–3.2"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Allocate Euler steps directly from acquisition thickness using PAD and AIS, without an auxiliary difficulty network.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.6"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "CETA aligns endpoint proxies for proximal thickness pairs from the same HR patch.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.5"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "existing": {
+      "text": "Rectified flow, U-Net-style restoration, AdaGN, Euler integration, and the broad posterior-mean-to-image transport idea precede this work. The MRI acquisition-aware conditioning, scheduling, and endpoint regularization make DRIFT specific.",
+      "source": {
+        "page": 4,
+        "label": "Related work"
+      },
+      "kind": "Paper evidence"
+    },
+    "stages": [
+      {
+        "label": "Thickness conditioning",
+        "input": "Input Ti and target Thr in mm",
+        "action": "Encode inverse thicknesses using separate MLPs, then fuse them.",
+        "why": "Represent the acquisition bandwidth conditions.",
+        "output": "Conditioning vector ci",
+        "source": {
+          "page": 6,
+          "label": "Eq. 2"
+        },
+        "status": "Metadata required"
+      },
+      {
+        "label": "Anatomical projection",
+        "input": "LR patch and thickness embedding",
+        "action": "APN reconstructs a coarse, structurally consistent HR patch.",
+        "why": "Provide a short residual path and deterministic slice initialization.",
+        "output": "Coarse estimate z",
+        "source": {
+          "page": 7,
+          "label": "Eq. 4"
+        },
+        "status": "Frozen in stage 2 training"
+      },
+      {
+        "label": "PAD → AIS",
+        "input": "Input and target thicknesses",
+        "action": "Map relative bandwidth loss to 0–15 Euler steps.",
+        "why": "Allocate more evaluations to thicker, harder inputs.",
+        "output": "Step budget N",
+        "source": {
+          "page": 9,
+          "label": "Eqs. 13–14"
+        },
+        "status": "Inference only"
+      },
+      {
+        "label": "Rectified-flow refinement",
+        "input": "z, time and thickness conditioning",
+        "action": "Integrate the learned velocity from the APN estimate.",
+        "why": "Recover fine details under the chosen budget.",
+        "output": "Refined HR patch",
+        "source": {
+          "page": 7,
+          "label": "Sec. 3.4; p. 9"
+        },
+        "status": "Trained"
+      },
+      {
+        "label": "Volume assembly",
+        "input": "Overlapping predicted patches/slices",
+        "action": "Blend overlapping patches and compose the volume.",
+        "why": "Apply the 2D operator across a full volume.",
+        "output": "Super-resolved MRI",
+        "source": {
+          "page": 10,
+          "label": "Implementation"
+        },
+        "status": "Inference"
+      }
+    ],
+    "training": [
+      {
+        "text": "Synthesize LR/HR pairs using an SLR-derived slice profile and random thickness/axis. Train APN with Charbonnier + 0.5 × SSIM loss.",
+        "source": {
+          "page": 6,
+          "label": "Sec. 3.1; p. 7 Eq. 5"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Freeze APN. Interpolate between its output and HR target; train velocity with Huber regression and endpoint-biased time sampling.",
+        "source": {
+          "page": 7,
+          "label": "Sec. 3.4; p. 8 Eq. 9"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Add CETA on neighboring thicknesses (1 mm gap); stage-2 loss is LRF + λceta LCETA. HR targets and paired thickness conditions are training-only.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.5"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "inference": [
+      {
+        "text": "Supply input and target thickness; run APN once to initialize the image state.",
+        "source": {
+          "page": 6,
+          "label": "Sec. 3.2; p. 7 Eq. 4"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Compute PAD and the AIS budget, then integrate the rectified-flow velocity with Euler steps. No random-noise start, CETA loss, or HR target is used.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.6"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Blend sliding-window patches with 32-pixel overlap and compose slices into a 3D volume.",
+        "source": {
+          "page": 10,
+          "label": "Implementation"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "results": [
+      {
+        "metric": "PSNR (dB)",
+        "dataset": "HCP ×8, 5.6 → 0.7 mm",
+        "baseline": "SwinIR",
+        "before": 33.13,
+        "after": 35.93,
+        "direction": "up",
+        "source": {
+          "page": 12,
+          "label": "Table 1"
+        },
+        "note": "Fixed-scale, retrained baseline comparison on simulated thick-slice data.",
+        "proposed": null
+      },
+      {
+        "metric": "SSIM",
+        "dataset": "HCP ×8, 5.6 → 0.7 mm",
+        "baseline": "SwinIR",
+        "before": 0.882,
+        "after": 0.936,
+        "direction": "up",
+        "source": {
+          "page": 12,
+          "label": "Table 1"
+        },
+        "note": "SSIM is averaged over slices in three directions; PSNR is measured over volumes.",
+        "proposed": null
+      },
+      {
+        "metric": "Velocity NFEs",
+        "dataset": "HCP ×8, 5.6 → 0.7 mm",
+        "baseline": "ResShift",
+        "before": 15,
+        "after": 13,
+        "direction": "down",
+        "source": {
+          "page": 13,
+          "label": "Sec. 4.4 & Fig. 6 p. 14"
+        },
+        "note": "This is stage-2 velocity NFE, not total pipeline computation. DRIFT also runs APN.",
+        "proposed": null
+      }
+    ],
+    "limitations": [
+      {
+        "text": "Main experiments use fixed native target thicknesses; broader target-resolution and anatomy generalization remain future directions.",
+        "source": {
+          "page": 15,
+          "label": "Conclusion"
+        },
+        "kind": "Authors’ limitation"
+      },
+      {
+        "text": "The real thick-slice evaluation has no isotropic ground truth. Visual sharpness and no-reference metrics cannot establish exact anatomical recovery.",
+        "source": {
+          "page": 12,
+          "label": "Sec. 4.3"
+        },
+        "kind": "Scope of evidence"
+      },
+      {
+        "text": "The model processes 2D slices without explicit 3D convolution or cross-slice communication.",
+        "source": {
+          "page": 5,
+          "label": "Sec. 3"
+        },
+        "kind": "Architectural boundary"
+      }
+    ],
+    "equations": [
+      {
+        "title": "A residual path, not a noise path",
+        "latex": "\\mathbf s_{p,i}(t)=(1-t)\\mathbf z_{p,i}+t\\mathbf y_p,\\qquad\\mathbf u_{p,i}=\\mathbf y_p-\\mathbf z_{p,i}",
+        "symbols": [
+          "p: patch index; i: input thickness condition; t ∈ [0,1]: interpolation time",
+          "z: coarse APN output; y: high-resolution target",
+          "s(t): intermediate image; u: constant target velocity"
+        ],
+        "plain": "Draw a straight line from the APN prediction to the target, and learn the direction along that line.",
+        "why": "The starting point already contains anatomy, so the network learns residual refinement rather than full synthesis.",
+        "source": {
+          "page": 7,
+          "label": "Eq. 6"
+        }
+      },
+      {
+        "title": "Turn thickness into a step budget",
+        "latex": "\\mathrm{PAD}=1-\\frac{T_{\\mathrm{hr}}}{T_i},\\qquad N=\\mathrm{clamp}\\!\\left(\\mathrm{round}(N_{\\max}\\mathrm{PAD}),N_{\\min},N_{\\max}\\right)",
+        "symbols": [
+          "Ti: input slice thickness; Thr: target thickness in the same units",
+          "PAD: normalized bandwidth-deficit cue; N: Euler steps / velocity NFEs",
+          "Nmin = 0 and Nmax = 15 in the main setting; clamp restricts the range"
+        ],
+        "plain": "A larger thickness gap receives more refinement steps. Equal thickness permits zero refinement.",
+        "why": "This is the actual metadata-only AIS rule. The interactive calculator below evaluates it, not the neural model.",
+        "source": {
+          "page": 9,
+          "label": "Eqs. 13–14"
+        }
+      }
+    ],
+    "dimensions": [
+      {
+        "id": "inference",
+        "role": "Primary contribution",
+        "text": "Short residual transport and thickness-adaptive ODE steps.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.6"
+        }
+      },
+      {
+        "id": "generalization",
+        "role": "Evaluated, bounded",
+        "text": "Continuous input thickness and zero-shot real thick-slice MRI; native target thickness mainly fixed.",
+        "source": {
+          "page": 12,
+          "label": "Secs. 4.2–4.3"
+        }
+      },
+      {
+        "id": "medical",
+        "role": "Application",
+        "text": "Through-plane MRI super-resolution.",
+        "source": {
+          "page": 1,
+          "label": "Title"
+        }
+      }
+    ],
+    "takeaway": "Start near the answer; use slice thickness to decide how much refinement is enough.",
+    "comparison": {
+      "domain": {
+        "text": "Through-plane MRI super-resolution",
+        "source": {
+          "page": 5,
+          "label": "Sec. 3"
+        },
+        "kind": "Paper evidence"
+      },
+      "architecture": {
+        "text": "2D APN followed by a thickness/time-conditioned rectified-flow velocity model",
+        "source": {
+          "page": 5,
+          "label": "Fig. 2"
+        },
+        "kind": "Paper evidence"
+      },
+      "objective": {
+        "text": "APN: Charbonnier + SSIM; velocity: Huber RF + CETA",
+        "source": {
+          "page": 7,
+          "label": "Secs. 3.3–3.5"
+        },
+        "kind": "Paper evidence"
+      },
+      "generative": {
+        "text": "Deterministic conditional rectified-flow refinement from APN output",
+        "source": {
+          "page": 4,
+          "label": "Fig. 1"
+        },
+        "kind": "Paper evidence"
+      },
+      "flow": {
+        "text": "Rectified flow; AIS selects sequential Euler steps",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.6"
+        },
+        "kind": "Paper evidence"
+      },
+      "frequency": {
+        "text": "Thickness proxies through-plane bandwidth loss; no wavelet module",
+        "source": {
+          "page": 9,
+          "label": "Eq. 13"
+        },
+        "kind": "Paper evidence"
+      },
+      "trainingCost": {
+        "text": "100 epochs per stage on 8×A6000; APN frozen during stage 2",
+        "source": {
+          "page": 10,
+          "label": "Implementation"
+        },
+        "kind": "Paper evidence"
+      },
+      "inferenceCost": {
+        "text": "APN plus 0–15 velocity NFEs; patch blending and volume assembly",
+        "source": {
+          "page": 10,
+          "label": "Implementation"
+        },
+        "kind": "Paper evidence"
+      },
+      "supervision": {
+        "text": "HR scans to synthesize LR/HR pairs; input/target thickness at inference",
+        "source": {
+          "page": 6,
+          "label": "Secs. 3.1–3.2"
+        },
+        "kind": "Paper evidence"
+      },
+      "modality": {
+        "text": "Brain T1w, T2w and FLAIR MRI",
+        "source": {
+          "page": 9,
+          "label": "Sec. 4.1"
+        },
+        "kind": "Paper evidence"
+      },
+      "datasets": {
+        "text": "HCP, MIND, IDEAS; real in-house/fastMRI; CC359 scheduling analysis",
+        "source": {
+          "page": 9,
+          "label": "Sec. 4.1"
+        },
+        "kind": "Paper evidence"
+      },
+      "metrics": {
+        "text": "PSNR, SSIM, LPIPS; latency and velocity NFEs",
+        "source": {
+          "page": 13,
+          "label": "Sec. 4.4"
+        },
+        "kind": "Paper evidence"
+      },
+      "input": {
+        "text": "Thick-slice MRI, input slice thickness and target thickness.",
+        "source": {
+          "page": 5,
+          "label": "Sec. 3; conditioning p. 6"
+        },
+        "kind": "Paper evidence"
+      },
+      "output": {
+        "text": "A super-resolved MRI volume assembled from refined patches/slices.",
+        "source": {
+          "page": 5,
+          "label": "Sec. 3; conditioning p. 6"
+        },
+        "kind": "Paper evidence"
+      }
+    },
+    "questions": [
+      {
+        "level": "Basic",
+        "question": "What problem does DRIFT address?",
+        "hint": "Name the task and the obstacle, before naming the method.",
+        "answer": "Thick-slice MRI loses through-plane detail. Fixed-scale models do not naturally handle continuous thickness changes, while iterative generative reconstruction can spend the same expensive step budget on both easy and hard inputs.",
+        "source": {
+          "page": 4,
+          "label": "Related work; p. 9 Sec. 3.6"
+        }
+      },
+      {
+        "level": "Basic",
+        "question": "What is the central idea of DRIFT?",
+        "hint": "Try explaining it without an acronym.",
+        "answer": "First make a coarse sharp-slice MRI estimate, then spend only the flow-refinement steps justified by the input slice thickness.",
+        "source": {
+          "page": 4,
+          "label": "Fig. 1"
+        }
+      },
+      {
+        "level": "Basic",
+        "question": "What goes in and what comes out of DRIFT?",
+        "hint": "Distinguish the deployment inputs from training supervision.",
+        "answer": "A thick-slice MRI volume, its input thickness, and a target thickness enter the system. Deterministic slice-wise APN + rectified-flow predictions are assembled into a super-resolved volume.",
+        "source": {
+          "page": 5,
+          "label": "Sec. 3; conditioning p. 6"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "Why start stage 2 from APN output rather than noise?",
+        "hint": "Think distance to the target and neighboring slices.",
+        "answer": "APN provides coarse anatomy near the target and correlated deterministic initial states across neighboring slices. Stage 2 can focus on residual detail.",
+        "source": {
+          "page": 7,
+          "label": "Sec. 3.3"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "What is frozen during stage-2 training?",
+        "hint": "The initialization should not keep moving.",
+        "answer": "The stage-1 APN. The velocity model learns to refine its stable coarse prediction.",
+        "source": {
+          "page": 7,
+          "label": "Sec. 3.4"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "What does CETA align?",
+        "hint": "Two nearby acquisition conditions share the same anatomy.",
+        "answer": "Endpoint proxies z + v for two proximal thickness conditions generated from the same HR patch; the main gap is 1 mm.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.5"
+        }
+      },
+      {
+        "level": "Reasoning",
+        "question": "How does DRIFT differ from ParaFlow in accelerating inference?",
+        "hint": "Changing the problem versus parallelizing the solver.",
+        "answer": "DRIFT trains a shorter residual transport and chooses fewer sequential steps using metadata. ParaFlow keeps the pretrained vector field and iteratively evaluates tentative steps in parallel.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.6"
+        }
+      },
+      {
+        "level": "Reasoning",
+        "question": "If the input thickness equals the target, what does AIS prescribe?",
+        "hint": "PAD is 1 − Thr/Ti.",
+        "answer": "PAD = 0 and N = 0 in the reported setting. No velocity refinement is requested, but APN and the rest of the pipeline are not free.",
+        "source": {
+          "page": 9,
+          "label": "Eqs. 13–14"
+        }
+      }
+    ]
+  },
+  {
+    "id": "c2p",
+    "short": "C2P",
+    "number": "05",
+    "filename": "ECCV26_05_C2P.pdf",
+    "title": "Concept-to-Pixel: Prompt-Free Universal Medical Image Segmentation",
+    "category": "Medical segmentation",
+    "task": "Prompt-free multimodal segmentation",
+    "color": "#87b9cb",
+    "position": [
+      510,
+      665
+    ],
+    "concepts": [
+      "segmentation",
+      "multimodal",
+      "geometry",
+      "dynamic",
+      "generalization",
+      "dice"
+    ],
+    "sentence": {
+      "text": "Teach a segmenter separate concepts for shape and medical appearance, then let those concepts control how it draws each mask.",
+      "source": {
+        "page": 3,
+        "label": "Introduction"
+      },
+      "kind": "Paper evidence"
+    },
+    "problem": {
+      "text": "Universal segmentation must cope with conflicting appearances across modalities. Prompt-based models require user input, reference-based models depend on support examples, and naive joint training can suffer negative transfer.",
+      "source": {
+        "page": 2,
+        "label": "Introduction"
+      },
+      "kind": "Paper evidence"
+    },
+    "core": [
+      {
+        "text": "Geometry tokens are supervised with measurable attributes extracted from masks, such as area and centroid. Semantic tokens are aligned with structured medical descriptions generated offline by an MLLM and encoded by PubMedBERT. Image-derived style and content modify only the semantic tokens.",
+        "source": {
+          "page": 5,
+          "label": "Sec. 2.2"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Bidirectional cross-attention makes tokens and image features sample-specific. A token-guided dynamic head creates foreground/background convolution weights for each image. At inference, geometry-aware consensus compares predicted attributes against mask-derived geometry to weight augmented views.",
+        "source": {
+          "page": 6,
+          "label": "Sec. 2.2; consensus p. 8"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "io": {
+      "text": "A medical image enters; foreground/background masks come out. At inference there are no manual prompts, reference images, or new MLLM-generated reports; geometric consensus can use several perturbed views.",
+      "source": {
+        "page": 8,
+        "label": "Sec. 2.4; zero-shot setup p. 10"
+      },
+      "kind": "Paper evidence"
+    },
+    "why": {
+      "text": "Shape provides a constraint shared across many modalities, while semantic tokens retain modality-dependent appearance. Explicit supervision makes these concept roles testable through ablations, but compact-shape priors can also fail on different topology.",
+      "source": {
+        "page": 11,
+        "label": "Generalization; Table 3 p. 12"
+      },
+      "kind": "Paper evidence"
+    },
+    "caution": {
+      "text": "Prompt-free is not supervision-free. Mask-derived attributes and offline MLLM reports are training supervision. Geometry-aware consensus adds multiple-view inference, so it is not established sampling acceleration.",
+      "source": {
+        "page": 9,
+        "label": "Implementation; Table 3 p. 12"
+      },
+      "kind": "Paper evidence"
+    },
+    "novelty": [
+      {
+        "text": "Explicitly supervised geometry tokens and MLLM-distilled semantic tokens, with modality bias injected only into semantics.",
+        "source": {
+          "page": 5,
+          "label": "Sec. 2.2"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Token-guided dynamic prediction conditioned on both token types and image context.",
+        "source": {
+          "page": 6,
+          "label": "Eqs. 6–7"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Use agreement between regressed geometry and predicted-mask geometry as an inference reliability signal.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 2.4"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "existing": {
+      "text": "ConvNeXt-based encoder–decoding, cross-attention, dynamic convolution, Qwen3-VL-Plus and PubMedBERT are ingredients. Their concept supervision and integration are the paper-specific design.",
+      "source": {
+        "page": 9,
+        "label": "Implementation; p. 6 Sec. 2.2"
+      },
+      "kind": "Paper evidence"
+    },
+    "stages": [
+      {
+        "label": "Image features",
+        "input": "Medical image",
+        "action": "Extract shallow E2 and deep E5 backbone features.",
+        "why": "Provide appearance statistics and structural context.",
+        "output": "Multiscale visual features",
+        "source": {
+          "page": 5,
+          "label": "Fig. 2"
+        },
+        "status": "Trained"
+      },
+      {
+        "label": "Geometry + semantics",
+        "input": "Learned tokens and image features",
+        "action": "SCFM injects style/content modality bias into semantic tokens only.",
+        "why": "Keep a shared geometry pathway while adapting appearance concepts.",
+        "output": "Geometry and modality-aware semantic tokens",
+        "source": {
+          "page": 5,
+          "label": "Sec. 2.2"
+        },
+        "status": "Trained"
+      },
+      {
+        "label": "Bidirectional interaction",
+        "input": "Tokens and deep visual features",
+        "action": "Tokens query images, then images query updated tokens.",
+        "why": "Ground concepts in this particular input.",
+        "output": "Instance-aware tokens and refined features",
+        "source": {
+          "page": 6,
+          "label": "Eqs. 2–5"
+        },
+        "status": "Trained"
+      },
+      {
+        "label": "Dynamic head",
+        "input": "Aggregated token features and decoder context",
+        "action": "Generate image-specific foreground/background convolution parameters.",
+        "why": "Adapt the pixel classifier to the input.",
+        "output": "Predicted masks",
+        "source": {
+          "page": 6,
+          "label": "Eqs. 6–7"
+        },
+        "status": "Trained"
+      },
+      {
+        "label": "Geometry consensus",
+        "input": "Masks and regressed geometry from augmented views",
+        "action": "Downweight views whose area/centroid disagree with their own geometry predictions.",
+        "why": "Suppress internally inconsistent predictions.",
+        "output": "Weighted final mask",
+        "source": {
+          "page": 8,
+          "label": "Sec. 2.4"
+        },
+        "status": "Inference only"
+      }
+    ],
+    "training": [
+      {
+        "text": "Offline: derive nine geometric attributes from ground-truth masks. Generate structured reports with Qwen3-VL-Plus and encode them into fixed PubMedBERT targets.",
+        "source": {
+          "page": 9,
+          "label": "Implementation"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Train the backbone, concept tokens, interactions and dynamic head with segmentation, geometry MSE, and semantic cosine-alignment losses.",
+        "source": {
+          "page": 7,
+          "label": "Sec. 2.3"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Text embeddings are frozen supervision targets; the learned semantic tokens are optimized. The MLLM is an offline teacher.",
+        "source": {
+          "page": 28,
+          "label": "Appendix B; offline embeddings"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "inference": [
+      {
+        "text": "Run the trained segmenter on the input image; no prompt, support example, or external MLLM call is required.",
+        "source": {
+          "page": 10,
+          "label": "Zero-shot evaluation"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Use perturbed views and geometry self-consistency to weight and aggregate masks; near-zero area contradictions receive explicit suppression.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 2.4"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "results": [
+      {
+        "metric": "Average Dice (%)",
+        "dataset": "Eight-dataset in-domain benchmark",
+        "baseline": "Spider",
+        "before": 87.32,
+        "after": 88.22,
+        "direction": "up",
+        "source": {
+          "page": 9,
+          "label": "Table 1"
+        },
+        "note": "One unified model. C2P does not win every individual dataset: nnUNetV2 is higher on AMDSD and BTD.",
+        "proposed": null
+      },
+      {
+        "metric": "Dice (%)",
+        "dataset": "Unseen Montgomery X-ray",
+        "baseline": "Spider, 64 references",
+        "before": 83.89,
+        "after": 87.6,
+        "direction": "up",
+        "source": {
+          "page": 11,
+          "label": "Table 2"
+        },
+        "note": "C2P uses zero references; this is one unseen-modality result, not proof of universal transfer.",
+        "proposed": null
+      },
+      {
+        "metric": "Dice (%)",
+        "dataset": "Unseen ISBI electron microscopy",
+        "baseline": "SR-ICL",
+        "before": 83.21,
+        "after": 26.79,
+        "direction": "up",
+        "source": {
+          "page": 11,
+          "label": "Table 2"
+        },
+        "note": "A pronounced failure. The authors link it to a compact-shape prior conflicting with elongated neuronal topology.",
+        "proposed": null
+      }
+    ],
+    "limitations": [
+      {
+        "text": "The compactness learned from macroscopic lesions transfers poorly to filamentous neuronal structures in electron microscopy.",
+        "source": {
+          "page": 11,
+          "label": "Table 2 & discussion"
+        },
+        "kind": "Authors’ failure analysis"
+      },
+      {
+        "text": "The paper reports mixed zero-shot outcomes: C2P trails Spider on BUSBRA and nnUNetV2 on GlaS.",
+        "source": {
+          "page": 11,
+          "label": "Table 2"
+        },
+        "kind": "Scope of evidence"
+      },
+      {
+        "text": "Geometry-aware consensus improves average Dice from 88.16 (standard TTA) to 88.22. This small incremental gain should be separated from the larger token-supervision gains.",
+        "source": {
+          "page": 12,
+          "label": "Table 3"
+        },
+        "kind": "Scope of evidence"
+      }
+    ],
+    "equations": [
+      {
+        "title": "Weight a view by geometric self-consistency",
+        "latex": "w_i=\\exp\\!\\left[-\\lambda\\left(10|a_i^{\\mathrm{reg}}-a_i^{\\mathrm{px}}|+\\|c_i^{\\mathrm{reg}}-c_i^{\\mathrm{px}}\\|_2\\right)\\right]",
+        "symbols": [
+          "i: perturbed view; wi: its confidence weight",
+          "areg / creg: regressed area / centroid from geometry tokens",
+          "apx / cpx: area / centroid measured from the predicted mask",
+          "λ: penalty sharpness; exp: exponential; ‖·‖₂: Euclidean distance"
+        ],
+        "plain": "A view gets less influence when its mask contradicts the geometry predicted by its own tokens.",
+        "why": "This connects explicitly trained geometry tokens to an inference-time self-check. Internal consistency is not a guarantee of correctness.",
+        "source": {
+          "page": 8,
+          "label": "Eq. 13"
+        }
+      }
+    ],
+    "dimensions": [
+      {
+        "id": "generalization",
+        "role": "Primary contribution",
+        "text": "One model across seven training modalities; explicitly mixed zero-shot results.",
+        "source": {
+          "page": 11,
+          "label": "Table 2"
+        }
+      },
+      {
+        "id": "medical",
+        "role": "Application",
+        "text": "Fully automatic medical image segmentation across diverse tasks.",
+        "source": {
+          "page": 9,
+          "label": "Table 1"
+        }
+      },
+      {
+        "id": "data",
+        "role": "Interaction reduction",
+        "text": "No prompts or reference examples at inference. This does not establish fewer training labels.",
+        "source": {
+          "page": 10,
+          "label": "Zero-shot evaluation"
+        }
+      }
+    ],
+    "takeaway": "Learn what a lesion looks like separately from its shape—but remember that a shape prior can be wrong.",
+    "comparison": {
+      "domain": {
+        "text": "Universal medical segmentation",
+        "source": {
+          "page": 1,
+          "label": "Abstract"
+        },
+        "kind": "Paper evidence"
+      },
+      "architecture": {
+        "text": "ConvNeXt-based backbone, GEO/SEM tokens, bidirectional cross-attention, TGDH",
+        "source": {
+          "page": 5,
+          "label": "Fig. 2; p. 9 Implementation"
+        },
+        "kind": "Paper evidence"
+      },
+      "objective": {
+        "text": "Structure + Dice segmentation; geometric MSE; semantic cosine embedding loss",
+        "source": {
+          "page": 7,
+          "label": "Sec. 2.3"
+        },
+        "kind": "Paper evidence"
+      },
+      "generative": {
+        "text": "Not a generative sampler; the MLLM provides offline training descriptions",
+        "source": {
+          "page": 9,
+          "label": "Implementation"
+        },
+        "kind": "Paper evidence"
+      },
+      "flow": {
+        "text": "No flow/diffusion segmentation process",
+        "source": {
+          "page": 5,
+          "label": "Fig. 2"
+        },
+        "kind": "Paper evidence"
+      },
+      "frequency": {
+        "text": "SCFM uses feature mean/std, not a wavelet decomposition",
+        "source": {
+          "page": 5,
+          "label": "SCFM"
+        },
+        "kind": "Paper evidence"
+      },
+      "trainingCost": {
+        "text": "Offline Qwen reports and PubMedBERT targets; 50 epochs, batch 8",
+        "source": {
+          "page": 9,
+          "label": "Implementation"
+        },
+        "kind": "Paper evidence"
+      },
+      "inferenceCost": {
+        "text": "Dynamic segmentation and augmented-view consensus; measured speedup not reported",
+        "source": {
+          "page": 8,
+          "label": "Sec. 2.4"
+        },
+        "kind": "Paper evidence"
+      },
+      "supervision": {
+        "text": "Masks, mask-derived geometric properties, offline MLLM text embeddings",
+        "source": {
+          "page": 9,
+          "label": "Implementation"
+        },
+        "kind": "Paper evidence"
+      },
+      "modality": {
+        "text": "Pathology, ultrasound, endoscopy, CT, dermoscopy, OCT, MRI; unseen X-ray/EM tests",
+        "source": {
+          "page": 9,
+          "label": "Table 1; Table 2 p. 11"
+        },
+        "kind": "Paper evidence"
+      },
+      "datasets": {
+        "text": "EBHI, TNUI, BUSI, Polyp, COVID, ISIC2018, AMDSD, BTD; eight additional zero-shot datasets",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.1; p. 9"
+        },
+        "kind": "Paper evidence"
+      },
+      "metrics": {
+        "text": "Dice (%)",
+        "source": {
+          "page": 9,
+          "label": "Table 1"
+        },
+        "kind": "Paper evidence"
+      },
+      "input": {
+        "text": "A medical image; multiple perturbed views for consensus. No user prompt or reference image.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 2.4; zero-shot setup p. 10"
+        },
+        "kind": "Paper evidence"
+      },
+      "output": {
+        "text": "Foreground/background segmentation masks, aggregated using predicted geometry.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 2.4; zero-shot setup p. 10"
+        },
+        "kind": "Paper evidence"
+      }
+    },
+    "questions": [
+      {
+        "level": "Basic",
+        "question": "What problem does C2P address?",
+        "hint": "Name the task and the obstacle, before naming the method.",
+        "answer": "Universal segmentation must cope with conflicting appearances across modalities. Prompt-based models require user input, reference-based models depend on support examples, and naive joint training can suffer negative transfer.",
+        "source": {
+          "page": 2,
+          "label": "Introduction"
+        }
+      },
+      {
+        "level": "Basic",
+        "question": "What is the central idea of C2P?",
+        "hint": "Try explaining it without an acronym.",
+        "answer": "Teach a segmenter separate concepts for shape and medical appearance, then let those concepts control how it draws each mask.",
+        "source": {
+          "page": 3,
+          "label": "Introduction"
+        }
+      },
+      {
+        "level": "Basic",
+        "question": "What goes in and what comes out of C2P?",
+        "hint": "Distinguish the deployment inputs from training supervision.",
+        "answer": "A medical image enters; foreground/background masks come out. At inference there are no manual prompts, reference images, or new MLLM-generated reports; geometric consensus can use several perturbed views.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 2.4; zero-shot setup p. 10"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "How are geometry tokens different from semantic tokens?",
+        "hint": "Compare their supervision.",
+        "answer": "Geometry tokens regress attributes computed from masks. Semantic tokens align to MLLM-generated descriptions encoded by PubMedBERT; only semantics receives the modality embedding.",
+        "source": {
+          "page": 5,
+          "label": "Sec. 2.2"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "What makes the segmentation head dynamic?",
+        "hint": "Its weights depend on this image.",
+        "answer": "An MLP generates foreground/background convolution weights from aggregated geometric tokens, semantic tokens and global image context.",
+        "source": {
+          "page": 6,
+          "label": "Eq. 7"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "Is an MLLM consulted for each test image?",
+        "hint": "Distinguish the teacher from the student.",
+        "answer": "No. The semantic knowledge is distilled through offline training embeddings; no new reports, prompts or tokens are introduced at zero-shot inference.",
+        "source": {
+          "page": 10,
+          "label": "Zero-shot evaluation"
+        }
+      },
+      {
+        "level": "Reasoning",
+        "question": "Why can geometry supervision hurt on electron microscopy?",
+        "hint": "Training topology matters.",
+        "answer": "The learned compactness prior fits many training lesions but conflicts with elongated neuronal structures. The paper reports only 26.79 Dice on ISBI EM.",
+        "source": {
+          "page": 11,
+          "label": "Table 2"
+        }
+      },
+      {
+        "level": "Reasoning",
+        "question": "Is C2P’s annotation story the same as WCC4MS?",
+        "hint": "Training labels versus inference interaction.",
+        "answer": "No. C2P removes inference prompts/references while using masks and concept supervision during training. WCC4MS explicitly combines dense masks and cheaper boxes.",
+        "source": {
+          "page": 9,
+          "label": "Implementation"
+        }
+      }
+    ]
+  },
+  {
+    "id": "paraflow",
+    "short": "ParaFlow",
+    "number": "06",
+    "filename": "ECCV26_06_ParaFlow.pdf",
+    "title": "ParaFlow: Parallel Sampling for Flow Matching Models",
+    "category": "Inference efficiency",
+    "task": "Parallel generative ODE sampling",
+    "color": "#b8cc87",
+    "position": [
+      510,
+      105
+    ],
+    "concepts": [
+      "flow",
+      "ode",
+      "nfe",
+      "parallel",
+      "diffusion",
+      "latent"
+    ],
+    "sentence": {
+      "text": "Generate faster by evaluating several tentative ODE steps in parallel, then iteratively correcting them to agree.",
+      "source": {
+        "page": 3,
+        "label": "Sec. 4"
+      },
+      "kind": "Paper evidence"
+    },
+    "problem": {
+      "text": "An ordinary Euler sampler waits for each neural-vector-field evaluation before starting the next step. Even a strong pretrained flow model therefore has a long sequential latency chain.",
+      "source": {
+        "page": 3,
+        "label": "Sec. 3 & 4.1"
+      },
+      "kind": "Paper evidence"
+    },
+    "core": [
+      {
+        "text": "Unroll the discrete ODE trajectory into triangular nonlinear equations: each state must equal the initial state plus the accumulated earlier velocity increments. Given tentative states, all their expensive vector-field evaluations can be computed at once; a fixed-point update revises the guesses.",
+        "source": {
+          "page": 3,
+          "label": "Sec. 4.2"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "ParaFlow operates within a sliding window, accepting a contiguous prefix whose changes satisfy a tolerance and advancing to the next part of the trajectory. The vector field stays pretrained. Exact convergence recovers the sequential discretized trajectory; practical early stopping introduces a tolerance–quality trade-off.",
+        "source": {
+          "page": 4,
+          "label": "Secs. 4.3–4.4"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "io": {
+      "text": "Initial noise, prompt/model conditioning, a pretrained flow vector field, a time schedule, window size and tolerance enter the sampler. The terminal sampled state is decoded into an image by the existing model.",
+      "source": {
+        "page": 4,
+        "label": "Algorithm 1 & experimental setup"
+      },
+      "kind": "Paper evidence"
+    },
+    "why": {
+      "text": "The triangular dependency means early states become correct first and remain correct. The full fixed-point scheme converges in at most N iterations; much smaller practical iteration counts are empirical, not guaranteed by that worst-case bound.",
+      "source": {
+        "page": 4,
+        "label": "Proposition 2; proof p. 12"
+      },
+      "kind": "Paper evidence"
+    },
+    "caution": {
+      "text": "Fewer sequential iterations and lower wall-clock time do not mean fewer total NFEs. The experiments use eight Ascend 910B devices, and parallel-state storage also increases memory requirements.",
+      "source": {
+        "page": 4,
+        "label": "Experimental setup; limitations pp. 8–9"
+      },
+      "kind": "Paper evidence"
+    },
+    "novelty": [
+      {
+        "text": "Formulate flow-matching sampling as triangular nonlinear equations with a trajectory-equivalent root.",
+        "source": {
+          "page": 3,
+          "label": "Sec. 4.2"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Use parallel fixed-point updates within a tolerance-controlled sliding window for pretrained FM models.",
+        "source": {
+          "page": 4,
+          "label": "Algorithm 1"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Give trajectory-equivalence and finite-iteration convergence arguments, then measure latency, iterations, NFEs and quality separately.",
+        "source": {
+          "page": 4,
+          "label": "Proposition 2; Table 1 p. 5"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "existing": {
+      "text": "Pretrained SD3/Flux vector fields, Euler integration, fixed-point iteration, and prior diffusion parallel-sampling ideas are reused. The authors explicitly build on ParaDiGMS, ParaTAA and ParaSolver.",
+      "source": {
+        "page": 2,
+        "label": "Parallel sampling related work"
+      },
+      "kind": "Paper evidence"
+    },
+    "stages": [
+      {
+        "label": "Initialize window",
+        "input": "Initial noise, schedule, tolerance δ and window p",
+        "action": "Set tentative states for the first window to the initial noise.",
+        "why": "Start the solver without training a new model.",
+        "output": "Tentative trajectory states",
+        "source": {
+          "page": 4,
+          "label": "Algorithm 1"
+        },
+        "status": "No training"
+      },
+      {
+        "label": "Parallel evaluation",
+        "input": "Tentative states at their respective times",
+        "action": "Evaluate the frozen vector-field network at p times in parallel.",
+        "why": "Replace a serial dependency chain with simultaneous expensive calls.",
+        "output": "Window of velocity estimates",
+        "source": {
+          "page": 4,
+          "label": "Algorithm 1"
+        },
+        "status": "Frozen pretrained model"
+      },
+      {
+        "label": "Fixed-point correction",
+        "input": "Window velocities",
+        "action": "Accumulate time-weighted increments and update tentative states.",
+        "why": "Make the trajectory better satisfy the original Euler equations.",
+        "output": "Revised states",
+        "source": {
+          "page": 3,
+          "label": "Eqs. 4–6"
+        },
+        "status": "Numerical solver"
+      },
+      {
+        "label": "Accept and slide",
+        "input": "Previous and revised states",
+        "action": "Test per-state changes; accept a converged prefix and shift the window.",
+        "why": "Avoid recomputing accepted states and bound working memory.",
+        "output": "Next active window",
+        "source": {
+          "page": 4,
+          "label": "Sec. 4.4"
+        },
+        "status": "Inference"
+      },
+      {
+        "label": "Return sample",
+        "input": "Converged terminal state",
+        "action": "Use the existing model’s image decoding.",
+        "why": "Finish generation without modifying the vector field.",
+        "output": "Generated image",
+        "source": {
+          "page": 4,
+          "label": "Algorithm 1 & setup"
+        },
+        "status": "Inference"
+      }
+    ],
+    "training": [
+      {
+        "text": "No new training, distillation, or fine-tuning is introduced by ParaFlow. Start with pretrained flow-matching models.",
+        "source": {
+          "page": 2,
+          "label": "Training-free description"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "The original model has already learned its vector field; that pretraining cost is outside the sampler contribution.",
+        "source": {
+          "page": 2,
+          "label": "Sec. 3"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "inference": [
+      {
+        "text": "Draw initial noise; choose the existing schedule, tolerance and parallel window. Keep all pretrained weights fixed.",
+        "source": {
+          "page": 4,
+          "label": "Algorithm 1"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Repeat parallel vector-field evaluation, prefix-sum state update, convergence check and sliding-window advance.",
+        "source": {
+          "page": 4,
+          "label": "Algorithm 1"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Return the final state. Latency savings depend on available parallel hardware; memory and total evaluation cost can increase.",
+        "source": {
+          "page": 9,
+          "label": "Limitations continuation"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "results": [
+      {
+        "metric": "Latency (s / image)",
+        "dataset": "FluxPrompting, FLUX 512², 50-step schedule",
+        "baseline": "Euler",
+        "before": 23.8,
+        "after": 5.58,
+        "direction": "down",
+        "source": {
+          "page": 9,
+          "label": "Table 5"
+        },
+        "note": "Window 8, tolerance 0.01, 10,000 prompts; eight Ascend 910B devices.",
+        "proposed": null
+      },
+      {
+        "metric": "Total NFEs",
+        "dataset": "Same FLUX 512² setting",
+        "baseline": "Euler",
+        "before": 50,
+        "after": 123.51,
+        "direction": "down",
+        "source": {
+          "page": 9,
+          "label": "Table 5"
+        },
+        "note": "Higher computational workload accompanies the latency gain.",
+        "proposed": null
+      },
+      {
+        "metric": "FID",
+        "dataset": "Same FLUX 512² setting",
+        "baseline": "Euler",
+        "before": 52.66,
+        "after": 52.58,
+        "direction": "down",
+        "source": {
+          "page": 9,
+          "label": "Table 5"
+        },
+        "note": "Quality is close in this setting. This small difference is not a claim of significant superiority.",
+        "proposed": null
+      },
+      {
+        "metric": "FID",
+        "dataset": "SD3 1024², 100-step schedule",
+        "baseline": "Euler",
+        "before": 50.75,
+        "after": 51.62,
+        "direction": "down",
+        "source": {
+          "page": 5,
+          "label": "Table 1"
+        },
+        "note": "A quality cost in another setting; ParaFlow’s practical tolerance is not exact convergence.",
+        "proposed": null
+      }
+    ],
+    "limitations": [
+      {
+        "text": "Parallel resources are required for speedups and intermediate-state memory increases. The current implementation is not fully system-optimized.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 6 continuation"
+        },
+        "kind": "Authors’ limitation"
+      },
+      {
+        "text": "Exact-trajectory theory concerns convergence to the chosen discrete sampler. Early stopping by tolerance can change image metrics; it does not remove ODE discretization error.",
+        "source": {
+          "page": 4,
+          "label": "Propositions 1–2; Table 2 p. 6"
+        },
+        "kind": "Reading boundary"
+      }
+    ],
+    "equations": [
+      {
+        "title": "Solve the trajectory together",
+        "latex": "\\hat x_{t_i}^{(k+1)}=x_{t_0}+\\sum_{j=0}^{i-1}h_j\\,v(\\hat x_{t_j}^{(k)},t_j,\\theta)",
+        "symbols": [
+          "x at t₀: initial noise; x̂ at ti: tentative state at schedule time ti",
+          "k: fixed-point iteration; i,j: schedule indices",
+          "hj = tj+1 − tj: step size; v: pretrained vector field; θ: fixed parameters",
+          "The t₀ state stays fixed in every iteration."
+        ],
+        "plain": "Use the old guesses to evaluate every velocity concurrently, then accumulate them into new guesses.",
+        "why": "This expands Eqs. 5–6 into one expression. Parallelism applies to network evaluations; consistency emerges over successive iterations.",
+        "source": {
+          "page": 3,
+          "label": "Eqs. 5–6 (Eq. 6 on p. 4)"
+        }
+      }
+    ],
+    "dimensions": [
+      {
+        "id": "inference",
+        "role": "Primary contribution",
+        "text": "Lower sequential latency through parallel evaluations; total NFEs can increase.",
+        "source": {
+          "page": 9,
+          "label": "Table 5"
+        }
+      },
+      {
+        "id": "training",
+        "role": "Avoided additional training",
+        "text": "Training-free sampler for pretrained models, not a reduction of original model training cost.",
+        "source": {
+          "page": 2,
+          "label": "Training-free description"
+        }
+      }
+    ],
+    "takeaway": "Less waiting can require more work: latency, iteration count and total NFEs are different quantities.",
+    "comparison": {
+      "domain": {
+        "text": "Text-to-image generative sampling",
+        "source": {
+          "page": 4,
+          "label": "Experimental setup"
+        },
+        "kind": "Paper evidence"
+      },
+      "architecture": {
+        "text": "Unchanged SD3 / FLUX models; a parallel numerical sampler",
+        "source": {
+          "page": 4,
+          "label": "Sec. 5"
+        },
+        "kind": "Paper evidence"
+      },
+      "objective": {
+        "text": "No new training objective",
+        "source": {
+          "page": 2,
+          "label": "Training-free description"
+        },
+        "kind": "Paper evidence"
+      },
+      "generative": {
+        "text": "Pretrained flow-matching ODE",
+        "source": {
+          "page": 2,
+          "label": "Sec. 3"
+        },
+        "kind": "Paper evidence"
+      },
+      "flow": {
+        "text": "Parallel fixed-point solve of Euler trajectory equations",
+        "source": {
+          "page": 3,
+          "label": "Sec. 4"
+        },
+        "kind": "Paper evidence"
+      },
+      "frequency": {
+        "text": "No wavelet/frequency intervention",
+        "source": {
+          "page": 3,
+          "label": "Sec. 4"
+        },
+        "kind": "Paper evidence"
+      },
+      "trainingCost": {
+        "text": "No extra training or distillation; pretrained-model cost excluded",
+        "source": {
+          "page": 2,
+          "label": "Training-free description"
+        },
+        "kind": "Paper evidence"
+      },
+      "inferenceCost": {
+        "text": "Trades higher total NFEs and memory for lower latency; tested on 8 Ascend 910B devices",
+        "source": {
+          "page": 4,
+          "label": "Sec. 5; p. 9 limitations"
+        },
+        "kind": "Paper evidence"
+      },
+      "supervision": {
+        "text": "No extra training supervision; existing text conditioning",
+        "source": {
+          "page": 4,
+          "label": "Sec. 5"
+        },
+        "kind": "Paper evidence"
+      },
+      "modality": {
+        "text": "Natural-image generation, not a medical experiment",
+        "source": {
+          "page": 4,
+          "label": "Sec. 5"
+        },
+        "kind": "Paper evidence"
+      },
+      "datasets": {
+        "text": "10,000 random FluxPrompting prompts",
+        "source": {
+          "page": 4,
+          "label": "Sec. 5"
+        },
+        "kind": "Paper evidence"
+      },
+      "metrics": {
+        "text": "Iterations, total NFEs, latency, FID and CLIP score",
+        "source": {
+          "page": 5,
+          "label": "Table 1"
+        },
+        "kind": "Paper evidence"
+      },
+      "input": {
+        "text": "Initial noise, pretrained conditioned vector field, time schedule, tolerance and window size.",
+        "source": {
+          "page": 4,
+          "label": "Algorithm 1 & experimental setup"
+        },
+        "kind": "Paper evidence"
+      },
+      "output": {
+        "text": "Terminal sampled state, decoded by the existing model into an image.",
+        "source": {
+          "page": 4,
+          "label": "Algorithm 1 & experimental setup"
+        },
+        "kind": "Paper evidence"
+      }
+    },
+    "questions": [
+      {
+        "level": "Basic",
+        "question": "What problem does ParaFlow address?",
+        "hint": "Name the task and the obstacle, before naming the method.",
+        "answer": "An ordinary Euler sampler waits for each neural-vector-field evaluation before starting the next step. Even a strong pretrained flow model therefore has a long sequential latency chain.",
+        "source": {
+          "page": 3,
+          "label": "Sec. 3 & 4.1"
+        }
+      },
+      {
+        "level": "Basic",
+        "question": "What is the central idea of ParaFlow?",
+        "hint": "Try explaining it without an acronym.",
+        "answer": "Generate faster by evaluating several tentative ODE steps in parallel, then iteratively correcting them to agree.",
+        "source": {
+          "page": 3,
+          "label": "Sec. 4"
+        }
+      },
+      {
+        "level": "Basic",
+        "question": "What goes in and what comes out of ParaFlow?",
+        "hint": "Distinguish the deployment inputs from training supervision.",
+        "answer": "Initial noise, prompt/model conditioning, a pretrained flow vector field, a time schedule, window size and tolerance enter the sampler. The terminal sampled state is decoded into an image by the existing model.",
+        "source": {
+          "page": 4,
+          "label": "Algorithm 1 & experimental setup"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "What exactly does ParaFlow parallelize?",
+        "hint": "Each tentative state already has a guessed value.",
+        "answer": "Vector-field evaluations at different tentative time states, within a sliding window. Fixed-point iterations then reconcile the trajectory.",
+        "source": {
+          "page": 4,
+          "label": "Algorithm 1"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "What happens to the model weights?",
+        "hint": "This is a solver contribution.",
+        "answer": "They remain pretrained and fixed. No new loss, distillation or fine-tuning is introduced.",
+        "source": {
+          "page": 2,
+          "label": "Training-free description"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "What is the theoretical convergence guarantee?",
+        "hint": "Separate worst-case iterations from observed speed.",
+        "answer": "The full fixed-point scheme recovers the same sequential discrete trajectory in at most N iterations. Fewer practical iterations are observed; tolerance-based stopping is approximate.",
+        "source": {
+          "page": 4,
+          "label": "Proposition 2"
+        }
+      },
+      {
+        "level": "Reasoning",
+        "question": "How can latency decrease while total NFEs increase?",
+        "hint": "Several calls finish simultaneously.",
+        "answer": "Many vector-field evaluations are performed concurrently. For FLUX 512², 50-step Euler takes 23.80 s and 50 NFEs, while window-8 ParaFlow takes 5.58 s and 123.51 NFEs.",
+        "source": {
+          "page": 9,
+          "label": "Table 5"
+        }
+      },
+      {
+        "level": "Reasoning",
+        "question": "Would the reported speedup automatically hold on one small GPU?",
+        "hint": "Check hardware and memory requirements.",
+        "answer": "No. Parallel capacity and intermediate-state memory are essential. The reported experiments used eight Ascend 910B devices.",
+        "source": {
+          "page": 4,
+          "label": "Sec. 5; p. 9 limitations"
+        }
+      }
+    ]
+  },
+  {
+    "id": "debat",
+    "short": "DeBaT",
+    "number": "07",
+    "filename": "ECCV26_07_DeBaT.pdf",
+    "title": "Decoupling High and Low Frequencies for Faithful Image Generation with Fine Details",
+    "category": "Representation efficiency",
+    "task": "Detail-preserving latent image generation",
+    "color": "#d7a28b",
+    "position": [
+      100,
+      385
+    ],
+    "concepts": [
+      "wavelets",
+      "frequency",
+      "latent",
+      "diffusion",
+      "fid"
+    ],
+    "sentence": {
+      "text": "Give coarse structure and fine detail separate encoders and losses, then combine their latents for image generation.",
+      "source": {
+        "page": 7,
+        "label": "Fig. 3"
+      },
+      "kind": "Paper evidence"
+    },
+    "problem": {
+      "text": "A tokenizer can improve overall reconstruction while still losing textures, sharp edges, and text. Joint objectives tend to favor dominant low-frequency structure, so extra latent capacity alone does not resolve the frequency imbalance.",
+      "source": {
+        "page": 2,
+        "label": "Introduction"
+      },
+      "kind": "Paper evidence"
+    },
+    "core": [
+      {
+        "text": "A single Haar wavelet decomposition splits the input into a low-frequency LL band and high-frequency LH/HL/HH bands. Separate encoder–decoder pairs learn these groups independently. The low branch uses VA-VAE-style objectives, including foundation alignment; the high branch omits pretrained-model supervision.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.2; high-frequency objective p. 9"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "The resulting low/high latents are concatenated along channels for LightningDiT training. Generation samples a joint learned latent, splits its channels, decodes the two frequency groups, and uses the inverse wavelet transform to reconstruct an image. The main total latent size matches VA-VAE: 16 × 16 × 32.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.3; latent size p. 8"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "io": {
+      "text": "Tokenizer reconstruction maps an input image through two band-specific latents back to an image. Generation starts from the latent generative model, then uses the two trained decoders and inverse Haar transform; no source image is required for synthesis.",
+      "source": {
+        "page": 9,
+        "label": "Inference & Sec. 3.3"
+      },
+      "kind": "Paper evidence"
+    },
+    "why": {
+      "text": "Separate optimization prevents dominant low-frequency errors from competing with high-frequency detail learning inside one shared tokenizer objective. Coupled-wavelet ablations test whether simply using wavelets is sufficient.",
+      "source": {
+        "page": 14,
+        "label": "Table 3 & frequency-decoupling ablation"
+      },
+      "kind": "Paper evidence"
+    },
+    "caution": {
+      "text": "The generator models learned, concatenated latent embeddings—not raw wavelet coefficients. Better fidelity at equal latent size does not mean a smaller or faster tokenizer: parameters and latency are higher than VA-VAE in Table 5.",
+      "source": {
+        "page": 15,
+        "label": "Table 5; fusion p. 9"
+      },
+      "kind": "Paper evidence"
+    },
+    "novelty": [
+      {
+        "text": "Evaluate reconstruction separately in low and high frequency bands to expose a detail-preservation bottleneck.",
+        "source": {
+          "page": 6,
+          "label": "Sec. 3.1"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Learn independent band-specific VAEs with different supervision before fusing the latents.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.2"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Integrate the concatenated band latents into an existing latent generative pipeline at matched total latent dimensionality.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.3"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "existing": {
+      "text": "Haar wavelets, VAE/KL training, adversarial objectives, DINOv2 alignment, and LightningDiT are existing components. Frequency decomposition alone is not DeBaT’s novelty; independent representation learning is.",
+      "source": {
+        "page": 8,
+        "label": "Sec. 3.2"
+      },
+      "kind": "Paper evidence"
+    },
+    "stages": [
+      {
+        "label": "Haar decomposition",
+        "input": "RGB image",
+        "action": "Split once into LL and the LH/HL/HH detail bands; normalize components.",
+        "why": "Expose structure and detail as separate learning problems.",
+        "output": "Low-frequency and high-frequency inputs",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.2"
+        },
+        "status": "Fixed transform"
+      },
+      {
+        "label": "Separate encoders",
+        "input": "Normalized low/high bands",
+        "action": "Encode each group with a dedicated VAE encoder.",
+        "why": "Avoid a fully coupled band representation.",
+        "output": "zL and zH",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.2"
+        },
+        "status": "Trained"
+      },
+      {
+        "label": "Latent fusion",
+        "input": "zL and zH",
+        "action": "Concatenate along channels for the generative model.",
+        "why": "Keep one joint generation interface at a matched latent size.",
+        "output": "16 × 16 × 32 combined latent",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.3"
+        },
+        "status": "Representation"
+      },
+      {
+        "label": "Band decoding",
+        "input": "Reconstructed or generated split latents",
+        "action": "Decode low and high groups with their respective decoders.",
+        "why": "Turn each learned representation back into its frequency components.",
+        "output": "Reconstructed LL and detail bands",
+        "source": {
+          "page": 9,
+          "label": "Inference"
+        },
+        "status": "Trained"
+      },
+      {
+        "label": "Inverse Haar",
+        "input": "Reconstructed frequency groups",
+        "action": "Apply inverse wavelet transform.",
+        "why": "Combine coarse structure and fine details in image space.",
+        "output": "Reconstructed or generated image",
+        "source": {
+          "page": 10,
+          "label": "Sec. 3.3"
+        },
+        "status": "Fixed transform"
+      }
+    ],
+    "training": [
+      {
+        "text": "Train the low-band VAE with reconstruction, KL, vision-foundation alignment, adversarial and perceptual terms.",
+        "source": {
+          "page": 8,
+          "label": "Low-frequency objective"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Train the high-band VAE with reconstruction, KL and adversarial terms, without pretrained-model supervision.",
+        "source": {
+          "page": 9,
+          "label": "High-frequency objective"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Then train LightningDiT on concatenated learned latents. The tokenizer and generative-model stages serve different objectives.",
+        "source": {
+          "page": 12,
+          "label": "Sec. 4.2"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "inference": [
+      {
+        "text": "For synthesis, sample the joint latent with the trained LightningDiT model, then split its channels into low/high groups.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.3"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Use both band decoders and inverse Haar reconstruction. The input-image encoders and training discriminators are not needed for synthesis.",
+        "source": {
+          "page": 9,
+          "label": "Inference & Sec. 3.3"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "results": [
+      {
+        "metric": "High-frequency error",
+        "dataset": "ImageNet-1K reconstruction, 50k validation images",
+        "baseline": "VA-VAE",
+        "before": 0.0074,
+        "after": 0.002,
+        "direction": "down",
+        "source": {
+          "page": 11,
+          "label": "Table 1"
+        },
+        "note": "Matched 16 × 16 × 32 latent size; this is reconstruction, not generation FID.",
+        "proposed": null
+      },
+      {
+        "metric": "gFID with CFG",
+        "dataset": "ImageNet, LightningDiT, 64 epochs / 675M",
+        "baseline": "VA-VAE tokenizer",
+        "before": 2.11,
+        "after": 1.52,
+        "direction": "down",
+        "source": {
+          "page": 12,
+          "label": "Table 2"
+        },
+        "note": "A controlled tokenizer comparison. REPA reports 1.42 in the same table at 800 epochs, so DeBaT is not the best value in every row.",
+        "proposed": null
+      },
+      {
+        "metric": "Tokenizer latency (ms/image)",
+        "dataset": "256², batch size 32",
+        "baseline": "VA-VAE",
+        "before": 17.29,
+        "after": 19.97,
+        "direction": "down",
+        "source": {
+          "page": 15,
+          "label": "Table 5"
+        },
+        "note": "Fidelity improves while tokenizer speed worsens against VA-VAE; DeBaT also uses 137.91M vs 72.60M parameters.",
+        "proposed": null
+      }
+    ],
+    "limitations": [
+      {
+        "text": "The current model uses one decomposition stage and focuses on a VA-VAE foundation; multi-stage and other tokenizer integrations are future work.",
+        "source": {
+          "page": 15,
+          "label": "Discussion & future direction"
+        },
+        "kind": "Authors’ limitation"
+      },
+      {
+        "text": "Dual encoder–decoder branches increase parameter count, and latency is higher than VA-VAE in the reported setup.",
+        "source": {
+          "page": 15,
+          "label": "Table 5"
+        },
+        "kind": "Measured trade-off"
+      },
+      {
+        "text": "Table 3 reports DeBaT rFID 0.4156 while Table 1 reports 0.2156. These are separate table contexts; the atlas does not treat them as one interchangeable score.",
+        "source": {
+          "page": 14,
+          "label": "Table 3; Table 1 p. 11"
+        },
+        "kind": "Source qualification"
+      }
+    ],
+    "equations": [
+      {
+        "title": "Decode bands, then reconstruct the image",
+        "latex": "\\hat{\\mathbf x}_L=D_L(\\mathbf z_L),\\quad\\hat{\\mathbf x}_H=D_H(\\mathbf z_H),\\quad\\hat{\\mathbf x}=\\mathcal W^{-1}(\\hat{\\mathbf x}_L,\\hat{\\mathbf x}_H)",
+        "symbols": [
+          "zL / zH: low/high learned latent codes (encoded or sampled)",
+          "DL / DH: independently trained band decoders",
+          "x̂L / x̂H: reconstructed low/high bands; x̂: final image",
+          "W⁻¹: inverse Haar discrete wavelet transform"
+        ],
+        "plain": "Decode each part into the frequency group it learned, then recombine the groups with a fixed inverse transform.",
+        "why": "The separation lives inside the tokenizer; the diffusion model samples the concatenated learned latents.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.2, unnumbered inference equation"
+        }
+      }
+    ],
+    "dimensions": [
+      {
+        "id": "representation",
+        "role": "Primary contribution",
+        "text": "More faithful detail at matched total latent dimensionality.",
+        "source": {
+          "page": 11,
+          "label": "Table 1"
+        }
+      },
+      {
+        "id": "backbone",
+        "role": "Added cost",
+        "text": "137.91M tokenizer parameters versus 72.60M for VA-VAE; not an architectural size reduction.",
+        "source": {
+          "page": 15,
+          "label": "Table 5"
+        }
+      },
+      {
+        "id": "inference",
+        "role": "Trade-off",
+        "text": "Better reconstruction, but 19.97 vs 17.29 ms/image against VA-VAE.",
+        "source": {
+          "page": 15,
+          "label": "Table 5"
+        }
+      }
+    ],
+    "takeaway": "Wavelets expose the bands; separate learning protects the details.",
+    "comparison": {
+      "domain": {
+        "text": "Natural-image tokenization and generation",
+        "source": {
+          "page": 1,
+          "label": "Abstract"
+        },
+        "kind": "Paper evidence"
+      },
+      "architecture": {
+        "text": "Two band-specific VAE encoder–decoder pairs, channel fusion, LightningDiT",
+        "source": {
+          "page": 7,
+          "label": "Fig. 3"
+        },
+        "kind": "Paper evidence"
+      },
+      "objective": {
+        "text": "Low: reconstruction/KL/GAN/foundation/perceptual; high: reconstruction/KL/GAN",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.2; p. 9"
+        },
+        "kind": "Paper evidence"
+      },
+      "generative": {
+        "text": "LightningDiT operating on concatenated learned latents",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.3"
+        },
+        "kind": "Paper evidence"
+      },
+      "flow": {
+        "text": "Integrated into the paper’s latent diffusion pipeline; no new sampler",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.3"
+        },
+        "kind": "Paper evidence"
+      },
+      "frequency": {
+        "text": "Single-stage Haar: LL versus LH/HL/HH; independent optimization",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.2"
+        },
+        "kind": "Paper evidence"
+      },
+      "trainingCost": {
+        "text": "Two VAEs plus generative-model training; no demonstrated reduction against VA-VAE",
+        "source": {
+          "page": 15,
+          "label": "Table 5"
+        },
+        "kind": "Paper evidence"
+      },
+      "inferenceCost": {
+        "text": "Two decoders and inverse Haar; tokenizer latency 19.97 ms/image at batch 32",
+        "source": {
+          "page": 15,
+          "label": "Table 5"
+        },
+        "kind": "Paper evidence"
+      },
+      "supervision": {
+        "text": "Images; low branch uses pretrained feature alignment; high branch omits it",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.2"
+        },
+        "kind": "Paper evidence"
+      },
+      "modality": {
+        "text": "Natural RGB images; no medical evaluation",
+        "source": {
+          "page": 10,
+          "label": "Experiments"
+        },
+        "kind": "Paper evidence"
+      },
+      "datasets": {
+        "text": "ImageNet-1K; FFHQ 1024² extension",
+        "source": {
+          "page": 10,
+          "label": "Sec. 4; Table 4 p. 14"
+        },
+        "kind": "Paper evidence"
+      },
+      "metrics": {
+        "text": "Band reconstruction error, PSNR, LPIPS, rFID; gFID/sFID, IS, precision/recall",
+        "source": {
+          "page": 11,
+          "label": "Tables 1–2"
+        },
+        "kind": "Paper evidence"
+      },
+      "input": {
+        "text": "Reconstruction: an RGB image. Synthesis: latent generator sampling and class conditioning.",
+        "source": {
+          "page": 9,
+          "label": "Inference & Sec. 3.3"
+        },
+        "kind": "Paper evidence"
+      },
+      "output": {
+        "text": "An RGB image reconstructed by separate low/high-band decoders and inverse Haar.",
+        "source": {
+          "page": 9,
+          "label": "Inference & Sec. 3.3"
+        },
+        "kind": "Paper evidence"
+      }
+    },
+    "questions": [
+      {
+        "level": "Basic",
+        "question": "What problem does DeBaT address?",
+        "hint": "Name the task and the obstacle, before naming the method.",
+        "answer": "A tokenizer can improve overall reconstruction while still losing textures, sharp edges, and text. Joint objectives tend to favor dominant low-frequency structure, so extra latent capacity alone does not resolve the frequency imbalance.",
+        "source": {
+          "page": 2,
+          "label": "Introduction"
+        }
+      },
+      {
+        "level": "Basic",
+        "question": "What is the central idea of DeBaT?",
+        "hint": "Try explaining it without an acronym.",
+        "answer": "Give coarse structure and fine detail separate encoders and losses, then combine their latents for image generation.",
+        "source": {
+          "page": 7,
+          "label": "Fig. 3"
+        }
+      },
+      {
+        "level": "Basic",
+        "question": "What goes in and what comes out of DeBaT?",
+        "hint": "Distinguish the deployment inputs from training supervision.",
+        "answer": "Tokenizer reconstruction maps an input image through two band-specific latents back to an image. Generation starts from the latent generative model, then uses the two trained decoders and inverse Haar transform; no source image is required for synthesis.",
+        "source": {
+          "page": 9,
+          "label": "Inference & Sec. 3.3"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "Why use different losses for the two frequency groups?",
+        "hint": "The high branch avoids pretrained-feature bias.",
+        "answer": "The low branch uses semantic/foundation and perceptual supervision. The high branch uses reconstruction, KL and adversarial terms without pretrained-model supervision to focus on fine details.",
+        "source": {
+          "page": 9,
+          "label": "High-frequency objective"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "Does LightningDiT generate raw wavelet coefficients?",
+        "hint": "Locate the latent fusion step.",
+        "answer": "No. It models the concatenated learned low/high latent codes. Separate decoders produce the bands afterwards.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.3"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "What makes this more than adding Haar DWT to a VAE?",
+        "hint": "Follow where learning becomes separate.",
+        "answer": "Dedicated encoder–decoder pairs and independent objectives decouple band optimization. Coupled wavelet-input baselines are tested separately.",
+        "source": {
+          "page": 14,
+          "label": "Table 3"
+        }
+      },
+      {
+        "level": "Reasoning",
+        "question": "How is DeBaT’s use of wavelets different from KernelWave?",
+        "hint": "Representation versus training augmentation.",
+        "answer": "DeBaT learns separate compressed band representations for reconstruction and generation. KernelWave scales high-frequency coefficients to create smooth/sharp training variants for segmentation.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.2"
+        }
+      },
+      {
+        "level": "Reasoning",
+        "question": "Does better fidelity at equal latent size imply lower inference cost?",
+        "hint": "Check the parameter and timing columns.",
+        "answer": "No. DeBaT has more parameters and higher tokenizer latency than VA-VAE in Table 5 despite better reconstruction.",
+        "source": {
+          "page": 15,
+          "label": "Table 5"
+        }
+      }
+    ]
+  },
+  {
+    "id": "wcc4ms",
+    "short": "WCC4MS",
+    "number": "08",
+    "filename": "ECCV26_08_WCC4MS3DSeg.pdf",
+    "title": "Wavelet-Driven Cross-Domain Consistency for Mixed-Supervised 3D Tumor Segmentation",
+    "category": "Data & annotation efficiency",
+    "task": "Mixed-supervised 3D tumor segmentation",
+    "color": "#d7a28b",
+    "position": [
+      100,
+      665
+    ],
+    "concepts": [
+      "wavelets",
+      "frequency",
+      "segmentation",
+      "weak",
+      "generalization",
+      "dice",
+      "hd95"
+    ],
+    "sentence": {
+      "text": "Use masks and cheaper boxes together, while training the segmenter to stay consistent across synthetic smooth and sharp scans.",
+      "source": {
+        "page": 1,
+        "label": "Abstract"
+      },
+      "kind": "Paper evidence"
+    },
+    "problem": {
+      "text": "Dense 3D tumor masks are expensive. Adding box-labelled scans helps only if their different reconstruction characteristics do not confuse the model; mixing supervision from different sources can introduce harmful domain shifts.",
+      "source": {
+        "page": 2,
+        "label": "Introduction"
+      },
+      "kind": "Paper evidence"
+    },
+    "core": [
+      {
+        "text": "KernelWave decomposes a 3D patch using Haar wavelets. It keeps the low-frequency component and scales high-frequency coefficients up or down to create sharp and smooth variants. This approximates reconstruction-kernel frequency changes without requiring raw metadata.",
+        "source": {
+          "page": 6,
+          "label": "Sec. 3.2; implementation p. 9"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "The dual-branch system routes each sample to mask or box supervision through task-specific decoding. Consistency between the variants and an auxiliary domain-classification objective train useful features across domains. Deployment uses only the segmentation branch on candidate-centered patches.",
+        "source": {
+          "page": 7,
+          "label": "Sec. 3.3; implementation p. 9"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "io": {
+      "text": "Training uses lesion-centered 3D patches with either voxel masks or bounding boxes plus dataset identity. Inference uses a patch around an already localized candidate lesion and returns a tumor mask.",
+      "source": {
+        "page": 9,
+        "label": "Sec. 4.2"
+      },
+      "kind": "Paper evidence"
+    },
+    "why": {
+      "text": "The smooth/sharp pair changes frequency emphasis while keeping the lesion anatomy aligned. Consistency discourages brittle responses to those changes; cheap boxes supply localization information, while masks preserve boundary supervision.",
+      "source": {
+        "page": 5,
+        "label": "Fig. 2; ablation p. 13"
+      },
+      "kind": "Method rationale"
+    },
+    "caution": {
+      "text": "KernelWave is a metadata-free frequency proxy, not an exact CT reconstruction simulator. The domain head predicts provenance; it is not an adversarial domain-invariance module.",
+      "source": {
+        "page": 14,
+        "label": "Mechanism validation; p. 8 domain loss"
+      },
+      "kind": "Paper evidence"
+    },
+    "novelty": [
+      {
+        "text": "Combine KernelWave frequency variants with mixed mask/box supervision in a lesion-centered 3D framework.",
+        "source": {
+          "page": 5,
+          "label": "Fig. 2"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Enforce output consistency across smooth/sharp views while routing available annotation types to task-specific losses.",
+        "source": {
+          "page": 7,
+          "label": "Sec. 3.3"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Use a domain-aware auxiliary head to retain task-relevant image-quality cues.",
+        "source": {
+          "page": 8,
+          "label": "Domain-classification discussion"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "existing": {
+      "text": "Haar DWT, 3D U-Net/UNETR backbones, mask and detection losses, and KL consistency are established machinery. Their joint use for reconstruction-related shifts under mixed supervision is the contribution.",
+      "source": {
+        "page": 7,
+        "label": "Sec. 3.3; implementation p. 9"
+      },
+      "kind": "Paper evidence"
+    },
+    "stages": [
+      {
+        "label": "Candidate patch",
+        "input": "Localized lesion with mask or box annotation",
+        "action": "Crop a 96³ CT patch centered on the annotated candidate.",
+        "why": "Focus on lesion segmentation after localization.",
+        "output": "Lesion-centered patch",
+        "source": {
+          "page": 9,
+          "label": "Sec. 4.2"
+        },
+        "status": "Localization prerequisite"
+      },
+      {
+        "label": "KernelWave",
+        "input": "3D patch",
+        "action": "Apply two-level Haar decomposition; scale detail coefficients by δ and 1/δ.",
+        "why": "Create smooth/sharp frequency variants of the same anatomy.",
+        "output": "Aligned paired image variants",
+        "source": {
+          "page": 6,
+          "label": "Eqs. 4–6; p. 9"
+        },
+        "status": "Training augmentation"
+      },
+      {
+        "label": "Task-specific decoding",
+        "input": "Features from the paired branches",
+        "action": "Use the available mask or bounding-box supervision.",
+        "why": "Exploit both annotation types without treating a box as a dense mask.",
+        "output": "Segmentation or detection predictions",
+        "source": {
+          "page": 7,
+          "label": "Sec. 3.3"
+        },
+        "status": "Training"
+      },
+      {
+        "label": "Consistency + domain head",
+        "input": "Paired predictions and source-domain labels",
+        "action": "Apply KL consistency and predict dataset identity alongside task losses.",
+        "why": "Learn robustness while retaining useful domain/quality cues.",
+        "output": "Jointly optimized features",
+        "source": {
+          "page": 8,
+          "label": "Eq. 11"
+        },
+        "status": "Training only"
+      },
+      {
+        "label": "Segmentation deployment",
+        "input": "Candidate-centered test patch",
+        "action": "Use only the trained segmentation branch.",
+        "why": "Discard auxiliary supervision machinery at deployment.",
+        "output": "Voxelwise tumor mask",
+        "source": {
+          "page": 9,
+          "label": "Sec. 4.2"
+        },
+        "status": "Inference"
+      }
+    ],
+    "training": [
+      {
+        "text": "Combine mask-labelled CT data and box-only PN9; use 96³ candidate-centered patches and Haar KernelWave variants.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 4.2"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Route labels to Dice segmentation or detection classification/regression losses. Jointly add KL consistency and domain classification.",
+        "source": {
+          "page": 7,
+          "label": "Sec. 3.3; p. 8 Eq. 11"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "The domain head is a predictive auxiliary regularizer, not an adversarial mechanism that erases domain information.",
+        "source": {
+          "page": 8,
+          "label": "Domain-classification discussion"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "inference": [
+      {
+        "text": "Assume first-stage candidate localization has already happened. Crop a lesion-centered patch; this is not an end-to-end whole-scan detector.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 4.2"
+        },
+        "kind": "Paper evidence"
+      },
+      {
+        "text": "Use only the segmentation branch. Box decoding, domain-supervision losses, and KernelWave paired training views are not required by the reported deployment path.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 4.2; Fig. 2 p. 5"
+        },
+        "kind": "Paper evidence"
+      }
+    ],
+    "results": [
+      {
+        "metric": "DSC (%)",
+        "dataset": "LIDC-IDRI, 3D U-Net, mask:box 1:2",
+        "baseline": "MixSegNet",
+        "before": 78.19,
+        "after": 80.32,
+        "direction": "up",
+        "source": {
+          "page": 9,
+          "label": "Table 1"
+        },
+        "note": "Compare mixed-supervision baselines under the same reported setting, not full data versus fewer labels.",
+        "proposed": null
+      },
+      {
+        "metric": "Average DSC (%)",
+        "dataset": "Leave-one-domain-out CT evaluation",
+        "baseline": "GTVSeg",
+        "before": 57.93,
+        "after": 59.88,
+        "direction": "up",
+        "source": {
+          "page": 11,
+          "label": "Table 3"
+        },
+        "note": "Average over LIDC-IDRI, MSD-Lung and LNDb; absolute out-of-domain scores remain much lower than in-domain scores.",
+        "proposed": null
+      },
+      {
+        "metric": "HD95",
+        "dataset": "MSD-Lung, 3D UNETR",
+        "baseline": "MIST",
+        "before": 8.13,
+        "after": 8.21,
+        "direction": "down",
+        "source": {
+          "page": 10,
+          "label": "Table 2"
+        },
+        "note": "A counter-result: WCC4MS is slightly worse on this boundary metric despite its higher DSC.",
+        "proposed": null
+      }
+    ],
+    "limitations": [
+      {
+        "text": "The pipeline assumes candidate localization and evaluates patches centered on annotations. Whole-scan localization performance is outside the demonstrated segmentation result.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 4.2"
+        },
+        "kind": "Scope of evidence"
+      },
+      {
+        "text": "Too much weak box supervision can harm fine boundary learning; performance drops as the box share grows beyond a moderate ratio.",
+        "source": {
+          "page": 12,
+          "label": "Ratio discussion; Fig. 4 p. 13"
+        },
+        "kind": "Observed limitation"
+      },
+      {
+        "text": "Frequency modulation approximates a dominant kernel effect but is not an exact reconstruction simulation.",
+        "source": {
+          "page": 14,
+          "label": "Mechanism validation"
+        },
+        "kind": "Authors’ qualification"
+      }
+    ],
+    "equations": [
+      {
+        "title": "Make the same anatomy smoother or sharper",
+        "latex": "\\widetilde{\\mathcal X}_{\\epsilon}^{(v)}=\\delta\\mathcal X_{\\epsilon}^{(v)}\\quad\\text{(sharp)},\\qquad\\widetilde{\\mathcal X}_{\\epsilon}^{(v)}=\\frac{1}{\\delta}\\mathcal X_{\\epsilon}^{(v)}\\quad\\text{(smooth)}",
+        "symbols": [
+          "Xε(v): detail coefficients at wavelet level v",
+          "ε: one of LLH, LHL, HLL, LHH, HLH, HHL, HHH",
+          "δ > 1: gain; the reported best gain is 4",
+          "X̃: modified coefficients; the low-frequency LLL component is unchanged"
+        ],
+        "plain": "Turn up or down the detail bands while retaining the coarse structure, then reconstruct a spatial image.",
+        "why": "These paired training variants expose the segmenter to frequency shifts without acquisition metadata. The wavelet coefficients are not learned latent tokens.",
+        "source": {
+          "page": 6,
+          "label": "Eqs. 4–6"
+        }
+      }
+    ],
+    "dimensions": [
+      {
+        "id": "data",
+        "role": "Primary contribution",
+        "text": "Combine a limited mask set with cheaper bounding boxes.",
+        "source": {
+          "page": 9,
+          "label": "Table 1"
+        }
+      },
+      {
+        "id": "generalization",
+        "role": "Primary contribution",
+        "text": "Frequency variants and consistency for cross-domain CT segmentation.",
+        "source": {
+          "page": 11,
+          "label": "Table 3"
+        }
+      },
+      {
+        "id": "medical",
+        "role": "Application",
+        "text": "Lesion-centered 3D tumor segmentation, primarily lung CT; MRI extension also reported.",
+        "source": {
+          "page": 11,
+          "label": "Cross-modality validation"
+        }
+      }
+    ],
+    "takeaway": "Cheap labels help when their domains are handled carefully; wavelets create training variation here.",
+    "comparison": {
+      "domain": {
+        "text": "Mixed-supervised 3D tumor segmentation",
+        "source": {
+          "page": 1,
+          "label": "Abstract"
+        },
+        "kind": "Paper evidence"
+      },
+      "architecture": {
+        "text": "3D U-Net or UNETR; paired branches, task-specific mask/box decoding, domain heads",
+        "source": {
+          "page": 5,
+          "label": "Fig. 2; Tables 1–2"
+        },
+        "kind": "Paper evidence"
+      },
+      "objective": {
+        "text": "Dice + detection classification/regression + KL consistency + domain classification",
+        "source": {
+          "page": 8,
+          "label": "Eq. 11"
+        },
+        "kind": "Paper evidence"
+      },
+      "generative": {
+        "text": "Not a generative model",
+        "source": {
+          "page": 5,
+          "label": "Fig. 2"
+        },
+        "kind": "Paper evidence"
+      },
+      "flow": {
+        "text": "No flow/diffusion sampler",
+        "source": {
+          "page": 5,
+          "label": "Fig. 2"
+        },
+        "kind": "Paper evidence"
+      },
+      "frequency": {
+        "text": "Two-level 3D Haar; HF gain δ or 1/δ; LF unchanged",
+        "source": {
+          "page": 6,
+          "label": "Sec. 3.2; p. 9 implementation"
+        },
+        "kind": "Paper evidence"
+      },
+      "trainingCost": {
+        "text": "Auxiliary branches and frequency augmentation; 80 epochs, batch 8, 2×RTX 4090",
+        "source": {
+          "page": 8,
+          "label": "Sec. 4.2; continuation p. 9"
+        },
+        "kind": "Paper evidence"
+      },
+      "inferenceCost": {
+        "text": "Segmentation branch only on candidate-centered patches; speedup not reported",
+        "source": {
+          "page": 9,
+          "label": "Sec. 4.2"
+        },
+        "kind": "Paper evidence"
+      },
+      "supervision": {
+        "text": "Masks + bounding boxes + dataset/domain identity",
+        "source": {
+          "page": 7,
+          "label": "Sec. 3.3"
+        },
+        "kind": "Paper evidence"
+      },
+      "modality": {
+        "text": "Primary lung CT; brain MRI extension",
+        "source": {
+          "page": 11,
+          "label": "Cross-modality validation"
+        },
+        "kind": "Paper evidence"
+      },
+      "datasets": {
+        "text": "LIDC-IDRI, MSD-Lung, LNDb; box-only PN9; MRI: BraTS, MSD-BT, FeTS, TCGA-GBM",
+        "source": {
+          "page": 8,
+          "label": "Sec. 4.1; p. 11"
+        },
+        "kind": "Paper evidence"
+      },
+      "metrics": {
+        "text": "DSC (%), HD95; frequency validation uses RKPN separately",
+        "source": {
+          "page": 9,
+          "label": "Table 1; Table 8 p. 14"
+        },
+        "kind": "Paper evidence"
+      },
+      "input": {
+        "text": "A candidate-centered 3D patch after lesion localization.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 4.2"
+        },
+        "kind": "Paper evidence"
+      },
+      "output": {
+        "text": "Voxelwise tumor segmentation from the segmentation branch.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 4.2"
+        },
+        "kind": "Paper evidence"
+      }
+    },
+    "questions": [
+      {
+        "level": "Basic",
+        "question": "What problem does WCC4MS address?",
+        "hint": "Name the task and the obstacle, before naming the method.",
+        "answer": "Dense 3D tumor masks are expensive. Adding box-labelled scans helps only if their different reconstruction characteristics do not confuse the model; mixing supervision from different sources can introduce harmful domain shifts.",
+        "source": {
+          "page": 2,
+          "label": "Introduction"
+        }
+      },
+      {
+        "level": "Basic",
+        "question": "What is the central idea of WCC4MS?",
+        "hint": "Try explaining it without an acronym.",
+        "answer": "Use masks and cheaper boxes together, while training the segmenter to stay consistent across synthetic smooth and sharp scans.",
+        "source": {
+          "page": 1,
+          "label": "Abstract"
+        }
+      },
+      {
+        "level": "Basic",
+        "question": "What goes in and what comes out of WCC4MS?",
+        "hint": "Distinguish the deployment inputs from training supervision.",
+        "answer": "Training uses lesion-centered 3D patches with either voxel masks or bounding boxes plus dataset identity. Inference uses a patch around an already localized candidate lesion and returns a tumor mask.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 4.2"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "What does KernelWave change and what does it preserve?",
+        "hint": "Separate high and low frequency bands.",
+        "answer": "It scales the high-frequency coefficients by δ or 1/δ and leaves the low-frequency component unchanged before inverse reconstruction.",
+        "source": {
+          "page": 6,
+          "label": "Eqs. 4–6"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "Which branch is used at deployment?",
+        "hint": "Look past the crowded training figure.",
+        "answer": "Only the segmentation branch. The box branch provides training supervision, and candidate localization is assumed to have happened already.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 4.2"
+        }
+      },
+      {
+        "level": "Method",
+        "question": "Does the domain head erase domain information adversarially?",
+        "hint": "Check the objective’s direction.",
+        "answer": "No. It predicts dataset provenance and encourages domain/quality-aware features constrained by the task and consistency losses.",
+        "source": {
+          "page": 8,
+          "label": "Domain-classification discussion"
+        }
+      },
+      {
+        "level": "Reasoning",
+        "question": "Why can adding more bounding boxes eventually hurt?",
+        "hint": "Cheap localization is not a precise boundary.",
+        "answer": "Excessive box supervision can divert attention from fine boundary textures. The reported ratio study improves at a moderate box share but degrades at higher shares.",
+        "source": {
+          "page": 12,
+          "label": "Ratio discussion"
+        }
+      },
+      {
+        "level": "Reasoning",
+        "question": "Why are shared wavelets insufficient to call this the same idea as DeBaT?",
+        "hint": "Ask what is trained on the bands.",
+        "answer": "Here wavelet modulation creates spatial training images for robustness. DeBaT learns separate compressed band representations for generation.",
+        "source": {
+          "page": 6,
+          "label": "Sec. 3.2"
+        }
+      }
+    ]
+  }
+]

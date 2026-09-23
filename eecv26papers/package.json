@@ -1,0 +1,31 @@
+{
+  "name": "research-paper-atlas",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "validate": "python scripts/validate.py",
+    "test": "playwright test"
+  },
+  "dependencies": {
+    "@fontsource-variable/dm-sans": "^5.3.0",
+    "@fontsource/instrument-serif": "^5.3.0",
+    "katex": "^0.16.22",
+    "lucide-react": "^0.468.0",
+    "pdfjs-dist": "^5.4.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/katex": "^0.16.7",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "^5.8.3",
+    "vite": "^7.1.0"
+  }
+}

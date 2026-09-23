@@ -1,0 +1,74 @@
+[
+  {
+    "id": "transferability",
+    "filename": "ECCV26_01_Transferability.pdf",
+    "pages": 42,
+    "sha256": "037e94e5a334a66c466c507f42f1b80e198fd5870c64bc0e64277df188ff2b19",
+    "pdf": "paper-assets/transferability/source.pdf",
+    "curated": true,
+    "titleCandidate": "Transferability Between Understanding and\n                   Generation in Unified Multimodal Models"
+  },
+  {
+    "id": "sphere",
+    "filename": "ECCV26_02_SPHERE.pdf",
+    "pages": 17,
+    "sha256": "8f6eddb1ab32d2c1ad4c7faed7d06ccf8f27797020b06c2322cbd2b36892a87f",
+    "pdf": "paper-assets/sphere/source.pdf",
+    "curated": true,
+    "titleCandidate": "SPHERE: From MRI Sampling Mechanisms to\n  Spatial Priors for Generalizable Brain Tumor\n                Segmentation"
+  },
+  {
+    "id": "pdf",
+    "filename": "ECCV26_03_PhysicsGroundedFlow.pdf",
+    "pages": 23,
+    "sha256": "dd9620958d5a24b9023154b4924c3fe3e427327ccf482022f7141673402426f2",
+    "pdf": "paper-assets/pdf/source.pdf",
+    "curated": true,
+    "titleCandidate": "Physics-Grounded Disentangled Flow Modeling\n                       for Brain Disease Progression Trajectory"
+  },
+  {
+    "id": "drift",
+    "filename": "ECCV26_04_DRIFT.pdf",
+    "pages": 35,
+    "sha256": "e46756eb3c5a934f09b3dbf673eb94eb6abdb2e9416978d03e52eb44e29c0ffd",
+    "pdf": "paper-assets/drift/source.pdf",
+    "curated": true,
+    "titleCandidate": "DRIFT: Difficulty-aware Rectified Flows for\n                     Through-plane MRI Super-Resolution"
+  },
+  {
+    "id": "c2p",
+    "filename": "ECCV26_05_C2P.pdf",
+    "pages": 32,
+    "sha256": "2c9da9d3b854501409d304e9f47b32f97c626930c8ed092980f30140a3308156",
+    "pdf": "paper-assets/c2p/source.pdf",
+    "curated": true,
+    "titleCandidate": "Concept-to-Pixel: Prompt-Free Universal Medical\n               Image Segmentation"
+  },
+  {
+    "id": "paraflow",
+    "filename": "ECCV26_06_ParaFlow.pdf",
+    "pages": 13,
+    "sha256": "1b5dd3ac484c175af541bbbe04d30005f4ae9cfcf883115dc7c12515c9efa94f",
+    "pdf": "paper-assets/paraflow/source.pdf",
+    "curated": true,
+    "titleCandidate": "Under review as a conference paper at ICLR 2026"
+  },
+  {
+    "id": "debat",
+    "filename": "ECCV26_07_DeBaT.pdf",
+    "pages": 30,
+    "sha256": "a1dc4efec49fc76ddd714a77ac5916bf95d50a9fb79a6f475cb12dea13f2d9fa",
+    "pdf": "paper-assets/debat/source.pdf",
+    "curated": true,
+    "titleCandidate": "Decoupling High and Low Frequencies for\n                   Faithful Image Generation with Fine Details"
+  },
+  {
+    "id": "wcc4ms",
+    "filename": "ECCV26_08_WCC4MS3DSeg.pdf",
+    "pages": 19,
+    "sha256": "0d96bb7b133ab1f86c1098f4ab5a18a49c2edc25bd67fd837f810e41ce1d26fe",
+    "pdf": "paper-assets/wcc4ms/source.pdf",
+    "curated": true,
+    "titleCandidate": "Wavelet-Driven Cross-Domain Consistency for\n   Mixed-Supervised 3D Tumor Segmentation"
+  }
+]

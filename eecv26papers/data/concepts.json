@@ -1,0 +1,722 @@
+[
+  {
+    "id": "flow",
+    "name": "Flow matching",
+    "definition": "Learn a time-dependent velocity field by matching target velocities along a chosen path. At inference, integrate the learned field to transport an initial state.",
+    "caveat": "The starting state and meaning of time differ across these papers. A shared learning family does not imply the same task.",
+    "uses": [
+      {
+        "paper": "pdf",
+        "role": "Separate morphology and intensity evolution for disease forecasting.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.2"
+        }
+      },
+      {
+        "paper": "drift",
+        "role": "Learn residual transport from a coarse APN image to an HR target.",
+        "source": {
+          "page": 7,
+          "label": "Sec. 3.4"
+        }
+      },
+      {
+        "paper": "paraflow",
+        "role": "Keep a pretrained field fixed; change how its ODE is solved.",
+        "source": {
+          "page": 3,
+          "label": "Sec. 4"
+        }
+      }
+    ]
+  },
+  {
+    "id": "rectified",
+    "name": "Rectified flow",
+    "definition": "The DRIFT training path interpolates linearly between a coarse estimate and the target, with target velocity equal to their difference.",
+    "caveat": "A straight training interpolation does not make a learned numerical inference trajectory exact in one step.",
+    "uses": [
+      {
+        "paper": "drift",
+        "role": "Residual image refinement after anatomical projection.",
+        "source": {
+          "page": 7,
+          "label": "Eq. 6"
+        }
+      },
+      {
+        "paper": "paraflow",
+        "role": "Related flow-model background; the contribution is a solver, not rectified-flow training.",
+        "source": {
+          "page": 2,
+          "label": "Sec. 2"
+        }
+      }
+    ]
+  },
+  {
+    "id": "ode",
+    "name": "ODE sampling",
+    "definition": "Numerically integrate a neural velocity field over a time interval to obtain a terminal state. Each solver evaluation calls the field model.",
+    "caveat": "A solver step, a sequential iteration, and a total network evaluation need not be the same quantity.",
+    "uses": [
+      {
+        "paper": "drift",
+        "role": "Thickness chooses the number of Euler refinements.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.6"
+        }
+      },
+      {
+        "paper": "paraflow",
+        "role": "Tentative states at multiple schedule times are evaluated concurrently.",
+        "source": {
+          "page": 4,
+          "label": "Algorithm 1"
+        }
+      },
+      {
+        "paper": "pdf",
+        "role": "Integrate morphology and intensity fields in a forecasting pipeline.",
+        "source": {
+          "page": 9,
+          "label": "Inference"
+        }
+      }
+    ]
+  },
+  {
+    "id": "nfe",
+    "name": "NFE",
+    "definition": "Number of function evaluations: how many times a neural vector field is evaluated.",
+    "caveat": "ParaFlow reports total NFEs across parallel evaluations. DRIFT’s velocity NFEs exclude APN and preprocessing.",
+    "uses": [
+      {
+        "paper": "paraflow",
+        "role": "Total workload can increase while sequential iterations decrease.",
+        "source": {
+          "page": 5,
+          "label": "Definition of NFE"
+        }
+      },
+      {
+        "paper": "drift",
+        "role": "AIS allocates 0–15 velocity-network evaluations in the main setting.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.6"
+        }
+      }
+    ]
+  },
+  {
+    "id": "parallel",
+    "name": "Parallel fixed-point iteration",
+    "definition": "Update multiple trajectory guesses using vector-field evaluations from the previous iteration, then repeat until a convergence criterion is met.",
+    "caveat": "Parallel evaluations require hardware and memory; the theoretical bound alone does not guarantee a wall-clock speedup.",
+    "uses": [
+      {
+        "paper": "paraflow",
+        "role": "Triangular trajectory equations solved in a sliding window.",
+        "source": {
+          "page": 4,
+          "label": "Secs. 4.3–4.4"
+        }
+      }
+    ]
+  },
+  {
+    "id": "diffusion",
+    "name": "Diffusion / generative modeling",
+    "definition": "These papers use or study existing image generators that iteratively transform a latent or token state into an image. Their exact generation objectives vary.",
+    "caveat": "Do not equate every image-generation architecture with the same diffusion or flow formulation.",
+    "uses": [
+      {
+        "paper": "transferability",
+        "role": "Studies discrete/continuous diffusion and autoregressive UMM families.",
+        "source": {
+          "page": 3,
+          "label": "Sec. 2.1"
+        }
+      },
+      {
+        "paper": "debat",
+        "role": "LightningDiT learns the concatenated frequency-aware latent distribution.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.3"
+        }
+      },
+      {
+        "paper": "paraflow",
+        "role": "Evaluates flow-matching models SD3 and FLUX.",
+        "source": {
+          "page": 4,
+          "label": "Experimental setup"
+        }
+      }
+    ]
+  },
+  {
+    "id": "wavelets",
+    "name": "Haar DWT",
+    "definition": "A fixed discrete wavelet transform separates coarse information from directional detail bands. In 2D there is one LL and three detail bands; in 3D one LLL and seven detail bands per level.",
+    "caveat": "The same transform plays different roles: learned representation in DeBaT versus training augmentation in KernelWave.",
+    "uses": [
+      {
+        "paper": "debat",
+        "role": "Split 2D image bands before training separate encoders and decoders.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.2"
+        }
+      },
+      {
+        "paper": "wcc4ms",
+        "role": "Scale 3D detail coefficients to make smooth/sharp training images.",
+        "source": {
+          "page": 6,
+          "label": "Sec. 3.2"
+        }
+      }
+    ]
+  },
+  {
+    "id": "frequency",
+    "name": "Frequency / high-frequency detail",
+    "definition": "High spatial frequencies describe rapid spatial variations such as fine textures and boundaries. Low frequencies describe more slowly varying structure.",
+    "caveat": "High frequency is not synonymous with useful anatomy: it can also include noise. Frequency processing here includes Haar, FFT, DoG, and bandwidth reasoning.",
+    "uses": [
+      {
+        "paper": "debat",
+        "role": "Protect fine details inside the tokenizer.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.2"
+        }
+      },
+      {
+        "paper": "wcc4ms",
+        "role": "Approximate CT reconstruction-related frequency shifts.",
+        "source": {
+          "page": 6,
+          "label": "Sec. 3.2"
+        }
+      },
+      {
+        "paper": "sphere",
+        "role": "Use FFT features and k-space simulation to derive a prior.",
+        "source": {
+          "page": 6,
+          "label": "Secs. 3.1–3.2"
+        }
+      },
+      {
+        "paper": "drift",
+        "role": "Model thickness-related loss of through-plane bandwidth.",
+        "source": {
+          "page": 9,
+          "label": "Eq. 13"
+        }
+      },
+      {
+        "paper": "pdf",
+        "role": "Use Difference-of-Gaussians lesion-texture guidance at inference.",
+        "source": {
+          "page": 22,
+          "label": "Appendix D"
+        }
+      }
+    ]
+  },
+  {
+    "id": "latent",
+    "name": "Latent representation",
+    "definition": "An encoded representation used between image input/output and the model’s central computation. Its structure controls what information can be carried forward.",
+    "caveat": "A shared representation is not automatically a better compressed representation; the papers measure different outcomes.",
+    "uses": [
+      {
+        "paper": "debat",
+        "role": "Concatenate separate low/high learned codes at a matched total size.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 3.3"
+        }
+      },
+      {
+        "paper": "transferability",
+        "role": "Probe how unified versus separate visual representations affect transfer.",
+        "source": {
+          "page": 5,
+          "label": "Fig. 1"
+        }
+      },
+      {
+        "paper": "paraflow",
+        "role": "Samples the existing model state without redesigning its representation.",
+        "source": {
+          "page": 4,
+          "label": "Experimental setup"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mri",
+    "name": "MRI",
+    "definition": "Magnetic resonance images are the medical inputs or outputs of several papers in this collection. The tasks concern different stages of the imaging workflow.",
+    "caveat": "Shared modality does not imply shared output: masks, super-resolved scans, and future scans answer different questions.",
+    "uses": [
+      {
+        "paper": "sphere",
+        "role": "Segment tumors in reconstructed brain MRI.",
+        "source": {
+          "page": 1,
+          "label": "Abstract"
+        }
+      },
+      {
+        "paper": "drift",
+        "role": "Reconstruct finer through-plane resolution.",
+        "source": {
+          "page": 5,
+          "label": "Sec. 3"
+        }
+      },
+      {
+        "paper": "pdf",
+        "role": "Forecast future brain images and lesion progression.",
+        "source": {
+          "page": 9,
+          "label": "Inference"
+        }
+      }
+    ]
+  },
+  {
+    "id": "kspace",
+    "name": "k-space sampling",
+    "definition": "MRI measurements encode spatial frequencies. A sampling operator selects which measurements contribute to a reconstructed image.",
+    "caveat": "This is acquisition sampling, not generative sampling. SPHERE estimates sampling-related parameters from already reconstructed images.",
+    "uses": [
+      {
+        "paper": "sphere",
+        "role": "Predict parameters, simulate perturbations, then derive a structural prior.",
+        "source": {
+          "page": 7,
+          "label": "Eqs. 10–14"
+        }
+      }
+    ]
+  },
+  {
+    "id": "dvf",
+    "name": "Deformation vector field",
+    "definition": "A spatial field that assigns a displacement vector to each location, allowing one image or feature grid to be warped toward another.",
+    "caveat": "SPHERE’s field is an acquisition-related structural proxy; PDF’s warp comes from predicted lesion evolution.",
+    "uses": [
+      {
+        "paper": "sphere",
+        "role": "Guide feature alignment and retention with a sampling-induced proxy.",
+        "source": {
+          "page": 8,
+          "label": "Sec. 3.3"
+        }
+      },
+      {
+        "paper": "pdf",
+        "role": "Estimate dense optical-flow displacement between lesion masks.",
+        "source": {
+          "page": 9,
+          "label": "Eq. 20"
+        }
+      }
+    ]
+  },
+  {
+    "id": "thickness",
+    "name": "Slice thickness / PAD",
+    "definition": "Slice thickness controls through-plane signal integration. DRIFT uses 1 − target thickness / input thickness as a normalized bandwidth-deficit cue.",
+    "caveat": "PAD is metadata-based severity, not a learned per-image difficulty score.",
+    "uses": [
+      {
+        "paper": "drift",
+        "role": "Condition both stages and set the AIS refinement budget.",
+        "source": {
+          "page": 9,
+          "label": "Eqs. 13–14"
+        }
+      }
+    ]
+  },
+  {
+    "id": "physics",
+    "name": "Physics-informed learning",
+    "definition": "Use structure motivated by an acquisition mechanism or disease-dynamics model to guide a learned method.",
+    "caveat": "A physics-inspired proxy or soft regularizer does not establish exact physical or biological fidelity.",
+    "uses": [
+      {
+        "paper": "sphere",
+        "role": "Sampling-related DVF guides segmentation.",
+        "source": {
+          "page": 7,
+          "label": "Sec. 3.2"
+        }
+      },
+      {
+        "paper": "pdf",
+        "role": "Diffusion–reaction–advection span constrains morphology velocity.",
+        "source": {
+          "page": 7,
+          "label": "Eq. 13"
+        }
+      },
+      {
+        "paper": "drift",
+        "role": "SLR slice-profile simulation and thickness-based bandwidth cue.",
+        "source": {
+          "page": 6,
+          "label": "Sec. 3.1; p. 9 Sec. 3.6"
+        }
+      }
+    ]
+  },
+  {
+    "id": "fisher",
+    "name": "Fisher-KPP",
+    "definition": "A reaction–diffusion formulation combines spatial spread with a logistic local-growth term. PDF adds advection to account for transport.",
+    "caveat": "PDF constructs a normalized concentration proxy from lesion masks; it does not measure biological cell density.",
+    "uses": [
+      {
+        "paper": "pdf",
+        "role": "Provides the components for a physics-inspired span.",
+        "source": {
+          "page": 5,
+          "label": "Eqs. 1–2"
+        }
+      }
+    ]
+  },
+  {
+    "id": "pde",
+    "name": "PDE regularization",
+    "definition": "In PDF, project the morphology velocity onto a span of spatial diffusion, reaction and advection components; penalize the squared residual.",
+    "caveat": "The loss is soft. It does not embed an exact PDE solver in the inference process.",
+    "uses": [
+      {
+        "paper": "pdf",
+        "role": "Regularizes morphology training alongside the flow-matching objective.",
+        "source": {
+          "page": 7,
+          "label": "Eq. 13"
+        }
+      }
+    ]
+  },
+  {
+    "id": "segmentation",
+    "name": "Medical segmentation",
+    "definition": "Predict a region mask identifying the anatomy or pathology of interest.",
+    "caveat": "The scope differs: brain MRI, universal 2D medical tasks, and candidate-centered 3D tumors are not interchangeable benchmarks.",
+    "uses": [
+      {
+        "paper": "sphere",
+        "role": "Brain tumor masks informed by an MRI acquisition prior.",
+        "source": {
+          "page": 5,
+          "label": "Fig. 3"
+        }
+      },
+      {
+        "paper": "c2p",
+        "role": "Prompt-free foreground/background masks across modalities.",
+        "source": {
+          "page": 5,
+          "label": "Fig. 2"
+        }
+      },
+      {
+        "paper": "wcc4ms",
+        "role": "3D tumor masks from localized candidate patches.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 4.2"
+        }
+      }
+    ]
+  },
+  {
+    "id": "generalization",
+    "name": "Cross-domain generalization",
+    "definition": "Evaluate whether a trained model works on a different dataset, acquisition condition, or modality without simply retraining on that test domain.",
+    "caveat": "Different papers use different protocols. Do not rank robustness from scores on unrelated datasets.",
+    "uses": [
+      {
+        "paper": "sphere",
+        "role": "BraTS 2023 training, BraTS 2019/MSD testing.",
+        "source": {
+          "page": 10,
+          "label": "Sec. 4.2"
+        }
+      },
+      {
+        "paper": "c2p",
+        "role": "Unseen datasets and unseen modalities, with explicit EM failure.",
+        "source": {
+          "page": 11,
+          "label": "Table 2"
+        }
+      },
+      {
+        "paper": "wcc4ms",
+        "role": "Leave-one-domain-out evaluation across CT sources.",
+        "source": {
+          "page": 11,
+          "label": "Table 3"
+        }
+      },
+      {
+        "paper": "drift",
+        "role": "Zero-shot real thick-slice MRI and unseen input thickness.",
+        "source": {
+          "page": 12,
+          "label": "Secs. 4.2–4.3"
+        }
+      }
+    ]
+  },
+  {
+    "id": "multimodal",
+    "name": "Multimodal learning",
+    "definition": "Learn from different kinds of input or information. Here the term can refer to text/images or to heterogeneous medical imaging modalities.",
+    "caveat": "C2P uses medical modalities and offline image–text distillation; Transferability studies understanding/generation in unified vision–language systems.",
+    "uses": [
+      {
+        "paper": "transferability",
+        "role": "Unify image understanding and generation through shared or coupled models.",
+        "source": {
+          "page": 3,
+          "label": "Sec. 2.1"
+        }
+      },
+      {
+        "paper": "c2p",
+        "role": "Separate modality-conditioned semantics from shared geometry.",
+        "source": {
+          "page": 5,
+          "label": "Sec. 2.2"
+        }
+      }
+    ]
+  },
+  {
+    "id": "transfer",
+    "name": "Cross-task transfer",
+    "definition": "Train a capability in one task and test whether the same capability improves in another task without directly training that second task in the intervention.",
+    "caveat": "Transfer varies with architecture, task, and direction; comparative evidence is not a universal causal law.",
+    "uses": [
+      {
+        "paper": "transferability",
+        "role": "Counting, layout and text probes test understanding ↔ generation.",
+        "source": {
+          "page": 5,
+          "label": "Table 1; pp. 8–13"
+        }
+      }
+    ]
+  },
+  {
+    "id": "geometry",
+    "name": "Geometry tokens",
+    "definition": "Learned tokens explicitly supervised with attributes derived from masks, such as area, bounding box and centroid.",
+    "caveat": "The token prior can fail when the test structure has a topology unlike the training structures.",
+    "uses": [
+      {
+        "paper": "c2p",
+        "role": "Guide dynamic segmentation and check inference-view self-consistency.",
+        "source": {
+          "page": 7,
+          "label": "Sec. 2.3; p. 8 Sec. 2.4"
+        }
+      }
+    ]
+  },
+  {
+    "id": "dynamic",
+    "name": "Dynamic convolution",
+    "definition": "Generate convolution parameters conditioned on the current input instead of using one fixed output classifier for all inputs.",
+    "caveat": "This describes input-specific weights, not training new weights at test time.",
+    "uses": [
+      {
+        "paper": "c2p",
+        "role": "TGDH generates foreground/background weights from tokens and image context.",
+        "source": {
+          "page": 6,
+          "label": "Eq. 7"
+        }
+      }
+    ]
+  },
+  {
+    "id": "weak",
+    "name": "Mixed / weak supervision",
+    "definition": "Combine dense voxel masks with less detailed labels, here bounding boxes. A box localizes an object without tracing its exact boundary.",
+    "caveat": "Mixed supervision differs from unlabeled-data semi-supervision. More weak labels can hurt when domains or task weights are poorly balanced.",
+    "uses": [
+      {
+        "paper": "wcc4ms",
+        "role": "Jointly exploit mask-labelled CT and box-only PN9.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 4.2"
+        }
+      }
+    ]
+  },
+  {
+    "id": "dice",
+    "name": "Dice / DSC",
+    "definition": "An overlap measure: twice the intersection divided by the total size of the two masks. Higher means stronger overlap.",
+    "caveat": "Some papers report a fraction, others a percentage. Overlap alone can hide boundary mistakes.",
+    "uses": [
+      {
+        "paper": "sphere",
+        "role": "Tumor-region Dice percentages.",
+        "source": {
+          "page": 14,
+          "label": "Table 7"
+        }
+      },
+      {
+        "paper": "c2p",
+        "role": "Dataset and average segmentation Dice percentages.",
+        "source": {
+          "page": 9,
+          "label": "Table 1"
+        }
+      },
+      {
+        "paper": "wcc4ms",
+        "role": "3D lesion DSC percentages.",
+        "source": {
+          "page": 9,
+          "label": "Table 1"
+        }
+      },
+      {
+        "paper": "pdf",
+        "role": "Future-lesion DSC fractions.",
+        "source": {
+          "page": 12,
+          "label": "Table 1"
+        }
+      }
+    ]
+  },
+  {
+    "id": "hd95",
+    "name": "HD95",
+    "definition": "The 95th-percentile boundary-distance metric used to assess segmentation boundary errors. Lower is better.",
+    "caveat": "Do not confuse it with maximum Hausdorff distance (HD), which PDF reports. SPHERE’s printed Eq. 25 shows maxima despite its HD95 prose; follow the named table metric cautiously.",
+    "uses": [
+      {
+        "paper": "sphere",
+        "role": "Reported Hausdorff95 tumor-boundary evaluation.",
+        "source": {
+          "page": 10,
+          "label": "Sec. 4.3; Table 8 p. 15"
+        }
+      },
+      {
+        "paper": "wcc4ms",
+        "role": "Boundary metric alongside DSC.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 4.2"
+        }
+      }
+    ]
+  },
+  {
+    "id": "psnr",
+    "name": "PSNR",
+    "definition": "Peak signal-to-noise ratio expresses image reconstruction error relative to the intensity dynamic range, in decibels. Higher is better for this distortion measure.",
+    "caveat": "High whole-image PSNR can coexist with poor prediction of a small changing lesion.",
+    "uses": [
+      {
+        "paper": "drift",
+        "role": "Volumetric super-resolution fidelity.",
+        "source": {
+          "page": 10,
+          "label": "Evaluation"
+        }
+      },
+      {
+        "paper": "pdf",
+        "role": "Whole-image future-scan similarity; compare with lesion metrics.",
+        "source": {
+          "page": 12,
+          "label": "Performance interpretation"
+        }
+      }
+    ]
+  },
+  {
+    "id": "ssim",
+    "name": "SSIM",
+    "definition": "Structural similarity compares image luminance, contrast and structural information. Higher is better for this metric.",
+    "caveat": "An image-quality score is not a validation of biological or clinical correctness.",
+    "uses": [
+      {
+        "paper": "drift",
+        "role": "Average across slices in axial, coronal and sagittal directions.",
+        "source": {
+          "page": 10,
+          "label": "Evaluation"
+        }
+      },
+      {
+        "paper": "pdf",
+        "role": "Image-level similarity for longitudinal forecasting.",
+        "source": {
+          "page": 21,
+          "label": "Appendix C.1"
+        }
+      }
+    ]
+  },
+  {
+    "id": "fid",
+    "name": "FID / rFID / gFID",
+    "definition": "Compare image distributions using statistics of pretrained Inception features. Lower indicates closer feature distributions to the chosen reference.",
+    "caveat": "The reference matters: Transferability compares against baseline-generated images; DeBaT distinguishes reconstruction and generation FID.",
+    "uses": [
+      {
+        "paper": "transferability",
+        "role": "FID to the baseline generator measures distribution shift.",
+        "source": {
+          "page": 9,
+          "label": "Sec. 4.1"
+        }
+      },
+      {
+        "paper": "debat",
+        "role": "rFID for reconstructed images and gFID for generated images.",
+        "source": {
+          "page": 7,
+          "label": "Sec. 3.1; p. 12 Table 2"
+        }
+      },
+      {
+        "paper": "paraflow",
+        "role": "Generation-quality comparison at different solver settings.",
+        "source": {
+          "page": 5,
+          "label": "Table 1"
+        }
+      }
+    ]
+  }
+]
